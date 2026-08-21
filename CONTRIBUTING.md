@@ -26,6 +26,27 @@ Code is launched. Test it only against applications and accounts you are
 authorized to use. The MVP scaffolding path uses npm and Playwright; preserve
 that limitation in documentation unless the implementation changes as well.
 
+## Releasing
+
+Versions follow semver: patch (`0.1.1` → `0.1.2`) for fixes and docs, minor
+(`0.1.x` → `0.2.0`) for new skills or backward-compatible behavior changes,
+major for anything that breaks an existing skill's interface.
+
+1. Bump `version` in **both** `.claude-plugin/plugin.json` and the matching
+   entry in `.claude-plugin/marketplace.json` — they must agree; `claude
+   plugin validate --strict` and `claude plugin tag` both enforce this.
+2. Merge that change to `main`.
+3. From `main`, cut the tag:
+
+   ```bash
+   claude plugin tag --dry-run .   # preview: confirms both files agree and shows the exact tag
+   claude plugin tag --push .      # creates verefi--v<version> and pushes it to origin
+   ```
+
+`claude plugin tag` refuses to run on a dirty working tree or re-tag an
+existing version by default — use `--force` only if you specifically mean to
+overwrite a tag that was cut in error.
+
 ## Reporting problems
 
 Use [GitHub Issues](https://github.com/philchen00/verefi/issues) for bugs and
