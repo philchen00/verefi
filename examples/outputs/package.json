@@ -1,0 +1,15 @@
+{
+  "name": "verefi-saucedemo-example",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Self-contained Playwright project so examples/outputs/tests/saucedemo-checkout.spec.ts is actually runnable from a fresh clone, not just illustrative.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1"
+  }
+}

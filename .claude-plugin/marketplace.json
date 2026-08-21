@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "verefi-marketplace",
+  "owner": {
+    "name": "Verefi"
+  },
+  "description": "Verefi plugins for human-reviewed Playwright test automation.",
+  "plugins": [
+    {
+      "name": "verefi",
+      "source": "./",
+      "description": "Turns product specs into reviewed test plans and executable Playwright tests.",
+      "version": "0.1.1"
+    }
+  ]
+}

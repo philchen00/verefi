@@ -1,0 +1,46 @@
+name: Validate Claude Code plugin
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate plugin manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Validate marketplace manifest
+        run: npx --yes @anthropic-ai/claude-code@2.1.226 plugin validate --strict .
+      - name: Validate plugin manifest
+        run: npx --yes @anthropic-ai/claude-code@2.1.226 plugin validate --strict .claude-plugin/plugin.json
+
+  shellcheck:
+    name: Shellcheck scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      # shellcheck ships preinstalled on GitHub's ubuntu-latest runners.
+      - name: Shellcheck
+        run: shellcheck scripts/*.sh
+
+  guard-drift:
+    name: Check remote-host guard stays in sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      # scripts/create-playwright.sh and examples/outputs/playwright.config.ts
+      # each carry their own copy of the remote-host/credentials safety guard
+      # (see scripts/check-guard-drift.sh for why they can't share one module).
+      # This fails the build if the two copies ever diverge unnoticed.
+      - name: Check guard blocks match
+        run: ./scripts/check-guard-drift.sh

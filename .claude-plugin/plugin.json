@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "verefi",
+  "displayName": "Verefi",
+  "version": "0.1.1",
+  "description": "AI-assisted pipeline that turns product specs into human-reviewed test plans and executable Playwright automation.",
+  "author": {
+    "name": "Phil Chen"
+  },
+  "homepage": "https://github.com/philchen00/verefi#readme",
+  "repository": "https://github.com/philchen00/verefi",
+  "license": "MIT",
+  "keywords": ["playwright", "testing", "test-generation", "quality-engineering"]
+}

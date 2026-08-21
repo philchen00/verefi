@@ -1,0 +1,73 @@
+name: Example Suite (live saucedemo.com)
+
+# examples/outputs/tests/saucedemo-checkout.spec.ts is a self-contained Playwright
+# project that runs against the real, live saucedemo.com — not a mock. The README
+# claims it's "still passing against the live site today, not just on the day they
+# were generated." This workflow is what keeps that claim honest: it re-runs on any
+# change likely to affect the example, plus weekly to catch the live site itself
+# drifting with no code change on our side at all.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "skills/**"
+      - "references/**"
+      - "examples/**"
+  pull_request:
+    paths:
+      - "skills/**"
+      - "references/**"
+      - "examples/**"
+  schedule:
+    - cron: "0 6 * * 1" # every Monday 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  example-suite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: examples/outputs
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: examples/outputs/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      # The example's own playwright.config.ts uses the 'list' reporter, which suits
+      # local/example use but produces no HTML report — add 'html' here, for CI only,
+      # so the upload step below has something to attach on failure. The config's
+      # remote-host guard requires BASE_URL + E2E_ALLOW_REMOTE to match exactly, and
+      # the spec requires its own E2E_* login vars — all four are saucedemo.com's own
+      # published dedicated demo-account values (see its login page), not secrets.
+      - name: Run example suite against live saucedemo.com
+        run: npx playwright test --reporter=list,html
+        env:
+          BASE_URL: https://www.saucedemo.com
+          E2E_ALLOW_REMOTE: www.saucedemo.com
+          E2E_USERNAME: standard_user
+          E2E_PASSWORD: secret_sauce
+          E2E_LOCKED_OUT_USERNAME: locked_out_user
+          E2E_INVALID_PASSWORD: wrong_password
+
+      - name: Upload HTML report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: example-suite-report
+          path: examples/outputs/playwright-report/
+          retention-days: 14
