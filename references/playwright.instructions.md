@@ -47,9 +47,38 @@ function requiredE2EEnv(name: 'E2E_USERNAME' | 'E2E_PASSWORD'): string {
 
 Only generate or run tests that create, modify, delete, purchase, send, or otherwise affect external state after the human has explicitly approved those exact actions. Use isolated test data and include deterministic cleanup or a documented rollback plan; never exercise real customer data merely to make a test realistic.
 
+## Page Object Model
+
+Generated suites use the Page Object Model, not inline locators in test bodies. One class per page/view grouping in `discovery.md`/`audit.md` Section 1, living at `<testDir>/pageObj/<PascalCaseName>Page.ts`:
+
+```typescript
+import type { Locator, Page } from '@playwright/test';
+
+export class ProductCatalogPage {
+  readonly title: Locator;
+  readonly inventoryItems: Locator;
+  readonly sortDropdown: Locator;
+
+  constructor(private readonly page: Page) {
+    this.title = page.locator('[data-test="title"]');
+    this.inventoryItems = page.locator('[data-test="inventory-item"]');
+    this.sortDropdown = page.locator('[data-test="product-sort-container"]');
+  }
+
+  async addToCart(productSlug: string) {
+    await this.page.locator(`[data-test="add-to-cart-${productSlug}"]`).click();
+  }
+}
+```
+
+- Constructor-based instantiation only (`const catalogPage = new ProductCatalogPage(page);` in the test) — never Playwright's `test.extend()` custom-fixture pattern. This keeps every object a test uses fully visible in that test's own body, with no fixture-wiring layer to trace through, matching every other explicit-over-implicit convention in this file.
+- Locators are `readonly` `Locator` properties assigned in the constructor, not getter methods. The priority order below decides what value to assign each one — it doesn't change where they live.
+- Action methods cover interactions confined to that one page/view. Assertions never live in a page-object class — tests do the verifying; page objects provide access and action only.
+- A user flow that spans multiple pages (e.g. "log in, add an item, go to checkout") is not a page-object concern — write it as a plain function in the spec file that composes multiple page-object instances (see "Test Organization" below), not as a method reaching into another class's concerns.
+
 ## Locators (Preferred Order)
 
-Use resilient locators that don't break when unrelated markup or styling changes:
+Use resilient locators that don't break when unrelated markup or styling changes. Declare each as a `readonly Locator` property on the relevant page-object class (see Page Object Model above); the priority order below decides what value to assign it, not where it lives:
 
 1. **Stable test-id attribute**: `page.getByTestId('submit-button')` — **only if the app's attribute is literally `data-testid`.** `getByTestId()` is hardcoded to that one attribute unless the actual `PLAYWRIGHT_CONFIG` sets `use.testIdAttribute` to something else. Apps commonly use `data-test`, `data-cy`, `data-qa`, `data-automation-id`, or a custom name instead — check `discovery.md`'s (or `audit.md`'s) "Test ID attribute" header field before writing a single `getByTestId()` call. If it names anything other than `data-testid`:
    - Set `use: { testIdAttribute: '<that attribute>' }` in the actual `PLAYWRIGHT_CONFIG` once, at the top of the run (Step 2b of `skills/implement/SKILL.md`), then `getByTestId()` works normally for the rest of the suite — this is the preferred fix, not a per-locator workaround.
@@ -65,19 +94,33 @@ If `discovery.md` is present, its selectors are ground truth — use them exactl
 
 Not every element needs a test-id to be reliably automatable — but not every missing test-id has a safe fallback either. Trust `discovery.md`'s/`audit.md`'s tagging (see their Gap sections) rather than re-deciding this yourself:
 
-- **`App missing — fallback available`**: a role/text locator was confirmed to resolve to exactly one element. Use it (`getByRole()`/`getByLabel()`/`getByText()`), but mark it as lower-confidence than a real test-id with a one-line comment directly above the locator, e.g.:
+- **`App missing — fallback available`**: a role/text locator was confirmed to resolve to exactly one element. Use it (`getByRole()`/`getByLabel()`/`getByText()`), but mark it as lower-confidence than a real test-id with a one-line comment directly above the page-object property or method that declares it, e.g.:
   ```typescript
-  // Fallback locator (no test-id available — see discovery.md Gap TC-004): role-based, may break if button text changes.
-  const removeButton = page.getByRole('listitem').filter({ hasText: productName }).getByRole('button', { name: 'Remove' });
+  // pageObj/CartPage.ts
+  export class CartPage {
+    constructor(private readonly page: Page) {}
+
+    // Fallback locator (no test-id available — see discovery.md Gap TC-004): role-based, may break if button text changes.
+    removeButtonFor(productName: string): Locator {
+      return this.page.getByRole('listitem').filter({ hasText: productName }).getByRole('button', { name: 'Remove' });
+    }
+  }
   ```
-- **`App missing — no fallback`**: nothing reliably addresses the element (no role, no accessible name, or a role/text locator matches more than one indistinguishable instance). **Never invent a CSS/`nth-child`/position-based selector to force this through** — that produces a test that looks green today and breaks silently on the next unrelated markup change, which is worse than not having the test. Instead, mark only that specific test case as blocked with `test.fixme()`, keep the rest of the test body as a ready-to-finish draft, and name the exact gap:
+- **`App missing — no fallback`**: nothing reliably addresses the element (no role, no accessible name, or a role/text locator matches more than one indistinguishable instance). **Never invent a CSS/`nth-child`/position-based selector to force this through** — that produces a test that looks green today and breaks silently on the next unrelated markup change, which is worse than not having the test. Instead, mark only that specific test case as blocked with `test.fixme()`, reference the page-object method it would have called (commented out) rather than a bare locator, and leave a matching breadcrumb in the page-object class itself so a reader who opens that file directly also sees why the method is missing:
   ```typescript
   test('TC-004: remove a specific item from a list of identical rows', async ({ page }) => {
     test.fixme(true, 'Blocked: no reliable per-row selector — see discovery.md Gap TC-004. Needs a data-testid on the row remove button (e.g. remove-item-{id}).');
-    // Implementation below is ready to uncomment once instrumented:
-    // const row = page.getByTestId(`remove-item-${itemId}`);
-    // await row.click();
+    // Ready to uncomment once CartPage exposes a reliable per-row locator:
+    // const cartPage = new CartPage(page);
+    // await cartPage.removeItem(itemId).click();
   });
+  ```
+  ```typescript
+  // pageObj/CartPage.ts
+  export class CartPage {
+    // TODO(discovery.md Gap TC-004): add removeItem(id) once the app exposes a reliable per-row selector.
+    constructor(private readonly page: Page) {}
+  }
   ```
   Other test cases in the same spec file that don't depend on the blocked element still get generated and run normally — one no-fallback gap blocks only the test case(s) that actually need it, never the whole file.
 
@@ -89,10 +132,11 @@ A gap tagged `App bug` in `discovery.md`/`audit.md` is not the same problem as a
 
 ```typescript
 test('TC-017 [KNOWN BUG]: error_user - inventory-page Remove button is broken', async ({ page }) => {
+  const inventoryPage = new InventoryPage(page);
   // ...setup...
-  await page.getByTestId('remove-item').click();
+  await inventoryPage.removeButton.click();
   await expect(
-    page.getByTestId('remove-item'),
+    inventoryPage.removeButton,
     'KNOWN BUG (discovery.md): error_user inventory-page Remove button silently no-ops'
   ).toHaveCount(0); // Correct behavior — currently fails; that failure is the point.
 });
@@ -107,6 +151,7 @@ test('TC-017 [KNOWN BUG]: error_user - inventory-page Remove button is broken', 
 ## Test Organization
 
 - One spec file per run (`<testDir>/<name>.spec.ts` — see `skills/implement/SKILL.md`), organized internally into one `test.describe('Feature Area', () => { ... })` block per feature area rather than separate files
+- One `pageObj/<PascalCaseName>Page.ts` per page/view grouping (see Page Object Model above). A helper that spans more than one page/view (e.g. "add an item and reach checkout step one") is a plain function in the spec file that composes multiple page-object instances — it does not belong inside any single page-object class.
 - Use `test.beforeEach()` for setup shared across a describe block
 - Keep tests independent and atomic — no test should depend on another test's side effects
 - Name tests after the test case they implement: `test('TC-001: ...', ...)`

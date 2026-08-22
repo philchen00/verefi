@@ -209,13 +209,51 @@ configuration rather than placing them in a prompt or a spec file.
 
 ---
 
+## Automating Verefi non-interactively
+
+Every Quick Start example above assumes one interactive session where you type
+each slash command yourself. You can drive the same pipeline from a script
+using Claude Code's headless mode, since every step hands off state purely
+through files under `.verefi/<name>/` — each step can be its own separate
+process:
+
+```bash
+claude -p "/verefi:testplan \"...\" --name <run>" \
+  --plugin-dir /path/to/verefi --add-dir /path/to/verefi --permission-mode acceptEdits
+```
+
+Four things bite anyone trying this for the first time — confirmed by an
+actual end-to-end run of this exact mechanism, not written from theory:
+
+1. **`--plugin-dir` alone can't read the plugin's own files in headless mode.**
+   `-p` sessions need `--add-dir <path-to-verefi>` too, or steps that read
+   `templates/*.md` fail outright.
+2. **`--permission-mode acceptEdits` only covers Edit/Write, not Bash.** Every
+   step past `testplan` shells out (`agent-browser`, `npm`, `npx playwright`)
+   and needs `--allowedTools "Bash"` explicitly, or the call silently denies
+   the command with no way to approve it interactively.
+3. **The human-confirmation gates in `discover` and `implement` expect a live
+   back-and-forth that one `-p` call can't provide.** Work around this by
+   embedding the actual confirmation text (exact hostname, approved scope,
+   plan-approval statement) directly in the initial prompt — the skill treats
+   a present, explicit confirmation the same regardless of whether it arrived
+   in a follow-up message or the first one. This is a real design tension
+   between "safe by default" and "scriptable," not a bug to silently route
+   around: whatever script embeds that confirmation is the thing making the
+   safety decision, so keep a human reviewing the script itself.
+4. **Env vars only carry across steps inside one continuous session.** Across
+   separate `-p` processes, `BASE_URL`, `E2E_ALLOW_REMOTE`, and any `E2E_*`
+   credential vars need to be set explicitly on every command that needs
+   them — an `execute` call without them silently targets the loopback
+   default baked into the generated config instead of your real target.
+
 ## Sample Output
 
 [`examples/outputs/`](examples/outputs/) is a complete run against [Swag Labs](https://www.saucedemo.com/), the demo shop Sauce Labs publishes for practicing automation. There's no `audit` step in it, for the same reason as the walkthrough above: nothing checked out locally to scan.
 
-- [`test-plan.md`](examples/outputs/test-plan.md) — 11 test cases with acceptance criteria, written from a [hand-written feature description](examples/inputs/saucedemo-checkout-feature.md), since this site has no real PRD
+- [`test-plan.md`](examples/outputs/test-plan.md) — 14 test cases with acceptance criteria, written from a [hand-written feature description](examples/inputs/saucedemo-checkout-feature.md), since this site has no real PRD
 - [`discovery.md`](examples/outputs/discovery.md) — selectors checked in a live browser. It caught a bad assumption in the plan: `data-testid` on paper, `data-test` on the actual site
-- [`tests/saucedemo-checkout.spec.ts`](examples/outputs/tests/saucedemo-checkout.spec.ts) — one file with 11 illustrative test cases generated from the reviewed plan
+- [`tests/e2e/saucedemo-checkout.spec.ts`](examples/outputs/tests/e2e/saucedemo-checkout.spec.ts) — 16 illustrative tests generated from the reviewed plan (one plan-level test case, blank-field login, becomes three Playwright tests), using [`tests/e2e/pageObj/`](examples/outputs/tests/e2e/pageObj/) page-object classes rather than inline locators
 - [`coverage-report.md`](examples/outputs/coverage-report.md) — a mockup of what a future coverage skill might print. Nothing in v1 produces this
 
 ---
@@ -331,6 +369,7 @@ Posting results back as a PR comment doesn't exist yet. It needs the coverage sk
 | 📋 Planned | Karate/API support |
 | 📋 Planned | A coverage skill — checks test cases against acceptance criteria, flags weak assertions, comments on PRs |
 | 📋 Planned | Discovery-first mode — build test scenarios straight from a live app when you don't have a spec yet |
+| 📋 Planned | TestClaudeSkill — an automated harness for verifying Claude Code skill changes end to end (headless pipeline runs against a real target, structural-invariant checks, `claude plugin eval`-based quality grading) |
 
 ---
 

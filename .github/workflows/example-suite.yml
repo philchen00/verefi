@@ -52,8 +52,10 @@ jobs:
       # local/example use but produces no HTML report — add 'html' here, for CI only,
       # so the upload step below has something to attach on failure. The config's
       # remote-host guard requires BASE_URL + E2E_ALLOW_REMOTE to match exactly, and
-      # the spec requires its own E2E_* login vars — all four are saucedemo.com's own
+      # the spec requires its own E2E_* login vars — all three are saucedemo.com's own
       # published dedicated demo-account values (see its login page), not secrets.
+      # TC-003's invalid-credential case uses hardcoded dummy strings directly in the
+      # spec rather than an env var, since they're arbitrary and not a real account.
       - name: Run example suite against live saucedemo.com
         run: npx playwright test --reporter=list,html
         env:
@@ -61,8 +63,7 @@ jobs:
           E2E_ALLOW_REMOTE: www.saucedemo.com
           E2E_USERNAME: standard_user
           E2E_PASSWORD: secret_sauce
-          E2E_LOCKED_OUT_USERNAME: locked_out_user
-          E2E_INVALID_PASSWORD: wrong_password
+          E2E_LOCKED_USERNAME: locked_out_user
 
       - name: Upload HTML report
         if: always()

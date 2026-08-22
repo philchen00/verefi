@@ -9,18 +9,18 @@
 
 | Category | Count |
 |---|---|
-| Acceptance criteria in test-plan.md | 30 |
-| Acceptance criteria covered by tests | 30 |
-| Test cases in test-plan.md | 11 |
-| Test cases with at least one test | 11 |
-| Test files generated | 1 |
-| Total test cases (Playwright) | 11 |
+| Acceptance criteria in test-plan.md | 27 |
+| Acceptance criteria covered by tests | 27 |
+| Test cases in test-plan.md | 14 |
+| Test cases with at least one test | 14 |
+| Test files generated | 1 (plus 6 page-object classes under `tests/e2e/pageObj/`) |
+| Total test cases (Playwright) | 16 |
 
-**Coverage: 100%** of the acceptance criteria actually written down in `test-plan.md`. That number is doing less work than it looks — see Missing Scenarios below for what the plan itself never asked for.
+**Coverage: 100%** of the acceptance criteria actually written down in `test-plan.md`. That number is doing less work than it looks — see Missing Scenarios below for what the plan itself never asked for. (TC-004's single plan-level acceptance criterion is exercised by three separate Playwright tests — TC-004a/b/c, one per blank-field combination — which is why the Playwright test count (16) is higher than the plan's test-case count (14).)
 
-**Human approval:** Approved by Demo Maintainer on 2026-08-15.
+**Human approval:** Approved by Phil Chen on 2026-08-21.
 
-**Approved demo target:** `www.saucedemo.com`, approved by Demo Maintainer for the public Swag Labs demo login, catalog, cart, and checkout flows only. The run may change disposable demo cart/order state; it must not use customer, payment, fulfillment, or production-account data.
+**Approved demo target:** `www.saucedemo.com`, approved by Phil Chen for the public Swag Labs demo login, catalog, cart, and checkout flows only. The run may change disposable demo cart/order state; it must not use customer, payment, fulfillment, or production-account data.
 
 **Guarded example run:** Values stay in your secret manager or environment; this command names the required `E2E_*` variables without recording their values:
 
@@ -32,8 +32,7 @@ BASE_URL=https://www.saucedemo.com \
 E2E_ALLOW_REMOTE=www.saucedemo.com \
 E2E_USERNAME="${E2E_USERNAME:?set E2E_USERNAME in your secret manager}" \
 E2E_PASSWORD="${E2E_PASSWORD:?set E2E_PASSWORD in your secret manager}" \
-E2E_LOCKED_OUT_USERNAME="${E2E_LOCKED_OUT_USERNAME:?set E2E_LOCKED_OUT_USERNAME in your secret manager}" \
-E2E_INVALID_PASSWORD="${E2E_INVALID_PASSWORD:?set E2E_INVALID_PASSWORD in your secret manager}" \
+E2E_LOCKED_USERNAME="${E2E_LOCKED_USERNAME:?set E2E_LOCKED_USERNAME in your secret manager}" \
 npx --no-install playwright test
 ```
 
@@ -45,23 +44,26 @@ Run only after a human has approved the exact host, scope, demo accounts, and cl
 
 | TC | Name | Type | Priority | Test File | Status |
 |---|---|---|---|---|---|
-| TC-001 | Successful login with a valid account | Happy Path | P1 | saucedemo-checkout.spec.ts | ✅ Covered |
-| TC-002 | Locked-out account is rejected with a specific error | Negative | P1 | saucedemo-checkout.spec.ts | ✅ Covered |
-| TC-003 | Invalid credentials are rejected with a specific error | Negative | P2 | saucedemo-checkout.spec.ts | ✅ Covered |
-| TC-004 | Sorting by price (low to high) reorders the catalog (set-preserved + order asserted) | Edge Case | P2 | saucedemo-checkout.spec.ts | ✅ Covered |
-| TC-005 | Adding a product updates the badge and the button | Happy Path | P1 | saucedemo-checkout.spec.ts | ✅ Covered |
-| TC-006 | Removing a product clears the badge | Happy Path | P2 | saucedemo-checkout.spec.ts | ✅ Covered |
-| TC-007 | Cart page lists added items correctly | Happy Path | P1 | saucedemo-checkout.spec.ts | ✅ Covered |
-| TC-008 | Checkout step one requires all three fields (all three validation messages asserted) | Negative | P2 | saucedemo-checkout.spec.ts | ✅ Covered |
-| TC-009 | Checkout overview shows correct item total, tax, and total | Happy Path | P1 | saucedemo-checkout.spec.ts | ✅ Covered |
-| TC-010 | Completing checkout shows a confirmation message | Happy Path | P1 | saucedemo-checkout.spec.ts | ✅ Covered |
-| TC-011 | Full purchase happy path, end to end (error-absence checked at all 5 transitions) | Happy Path | P1 | saucedemo-checkout.spec.ts | ✅ Covered |
+| TC-001 | Successful login with valid standard user | Happy Path | P1 | saucedemo-checkout.spec.ts | ✅ Covered |
+| TC-002 | Login blocked for a locked-out user | Negative | P2 | saucedemo-checkout.spec.ts | ✅ Covered |
+| TC-003 | Login rejected with invalid credentials | Negative | P2 | saucedemo-checkout.spec.ts | ✅ Covered |
+| TC-004 | Login rejected with empty username and/or password (3 Playwright tests: a/b/c) | Negative | P3 | saucedemo-checkout.spec.ts | ✅ Covered |
+| TC-005 | Product list displays all catalog items after login | Happy Path | P1 | saucedemo-checkout.spec.ts | ✅ Covered |
+| TC-006 | Sort products by Name (A to Z) | Happy Path | P2 | saucedemo-checkout.spec.ts | ✅ Covered |
+| TC-007 | Sort products by Name (Z to A) | Happy Path | P2 | saucedemo-checkout.spec.ts | ✅ Covered |
+| TC-008 | Sort products by Price (low to high) | Happy Path | P2 | saucedemo-checkout.spec.ts | ✅ Covered |
+| TC-009 | Sort products by Price (high to low) | Happy Path | P2 | saucedemo-checkout.spec.ts | ✅ Covered |
+| TC-010 | Add a single product to the cart and verify the cart badge | Happy Path | P1 | saucedemo-checkout.spec.ts | ✅ Covered |
+| TC-011 | Complete end-to-end checkout with one item | Happy Path | P1 | saucedemo-checkout.spec.ts | ✅ Covered |
+| TC-012 | Checkout blocked when required shipping info is missing | Negative | P2 | saucedemo-checkout.spec.ts | ✅ Covered |
+| TC-013 | Remove a product from the cart before checkout | Edge Case | P3 | saucedemo-checkout.spec.ts | ✅ Covered |
+| TC-014 | Logout ends the session and returns to the login page | Edge Case | P3 | saucedemo-checkout.spec.ts | ✅ Covered |
 
 ---
 
 ## Uncovered Acceptance Criteria
 
-None — every acceptance criterion in `test-plan.md` has a direct assertion. (This is what 100% coverage of a hand-picked 11-case plan against a small demo site looks like; it's a much easier bar to clear than a real product's full plan. See Missing Scenarios for what that number hides.)
+None — every acceptance criterion in `test-plan.md` has a direct assertion. (This is what 100% coverage of a hand-picked 14-case plan against a small demo site looks like; it's a much easier bar to clear than a real product's full plan. See Missing Scenarios for what that number hides.)
 
 ---
 
@@ -71,28 +73,26 @@ These scenarios are **not** in `test-plan.md` and were not tested — they're re
 
 ### 🟡 Medium Risk
 
-1. **Multi-item cart math** — TC-009 only proves the tax/total formula for a single $29.99 item. Nothing verifies the subtotal sums correctly across 2+ items, or that removing one item from a multi-item cart recalculates the total.
-2. **Cart page's own "Remove" button** — TC-006 removes an item from the *catalog* page. The cart page (`/cart.html`) has its own per-row Remove button (same `data-test` pattern, different page) that's never exercised.
-3. **Checkout Cancel buttons** — both `/checkout-step-one.html` and `/checkout-step-two.html` have a `[data-test="cancel"]` button that returns to a prior page without completing the order. Untested in both places.
-4. **Other vendor-provided demo account states** — each simulates a distinct bug class (for example, broken images, slow interactions, thrown errors, or visual regressions). `test-plan.md` explicitly scopes them out; a follow-up plan can cover them with separately approved demo credentials.
+1. **Multi-item cart math** — no test case verifies the subtotal/tax/total formula, or that a multi-item cart recalculates correctly on partial removal. Every checkout test here uses exactly one item.
+2. **Checkout Cancel buttons** — both `/checkout-step-one.html` and `/checkout-step-two.html` have a `[data-test="cancel"]` button that returns to a prior page without completing the order (both page-object classes expose `cancelButton`, but neither is exercised by a test). Untested in both places.
+3. **Other vendor-provided demo account states** — each simulates a distinct bug class (for example, broken images, slow interactions, thrown errors, or visual regressions). `test-plan.md` explicitly scopes them out; a follow-up plan can cover them with separately approved demo credentials.
 
 ### 🟢 Low Risk / Out of Scope
 
-5. **Remaining sort orders** — only "Price (low to high)" (TC-004) is tested; "Name (Z to A)" and "Price (high to low)" are untested but lower-risk (same dropdown, same rendering path).
-6. **"Back Home" / "Generate PDF order"** on the confirmation page — explicitly out of scope in `test-plan.md`.
-7. **Cross-browser** — Chromium only, per this pipeline's v1 scope.
+4. **"Back Home" / "Generate PDF order"** navigation from the confirmation page — the page object exposes `backHomeButton`, but no test clicks it.
+5. **Cross-browser** — Chromium only, per this pipeline's v1 scope.
 
 ---
 
 ## Weak Assertions Detected
 
-None. Every assertion in `saucedemo-checkout.spec.ts` is an exact match (`toHaveText`, `toHaveCount`, `toHaveURL`) against a value confirmed live during discovery — no `toContainText()`-as-a-shortcut, no conditional assertions, and absence checks use `toHaveCount(0)` rather than `not.toBeVisible()` (which would also pass on a hidden-but-present element — see `discovery.md` Section 4). Worth naming explicitly rather than leaving this section to imply "nothing to check": a small, well-instrumented target app makes exact assertions easy, which won't always be true against a real product's suite.
+None. Every assertion in `saucedemo-checkout.spec.ts` is an exact or content match (`toHaveText`, `toContainText`, `toHaveCount`, `toHaveURL`) against a value confirmed live during discovery — absence checks use `toHaveCount(0)` rather than `not.toBeVisible()` (which would also pass on a hidden-but-present element — see `discovery.md` Section 3). Worth naming explicitly rather than leaving this section to imply "nothing to check": a small, well-instrumented target app makes exact assertions easy, which won't always be true against a real product's suite.
 
 ---
 
 ## Recommendations
 
 1. **Add a multi-item-cart test** — add two products, verify the subtotal is their sum, remove one, verify the total updates. (~10 min to write, using selectors already in `discovery.md`.)
-2. **Add a plan for other demo account states** — use separately approved demo credentials; today's plan never touches them.
-3. **Cover both Cancel buttons** and the cart page's own Remove button — same effort tier as the existing tests, just unwritten.
+2. **Cover both Cancel buttons** — both page objects already expose `cancelButton`; writing the test is the only remaining step.
+3. **Add a plan for other demo account states** — use separately approved demo credentials; today's plan never touches them.
 4. **Re-run periodically** — this is the one example in the repo that hits a real, live, third-party-hosted app rather than a local server; if Sauce Labs ever changes Swag Labs' markup, this suite (unlike the others in this repo) can actually go red on its own.

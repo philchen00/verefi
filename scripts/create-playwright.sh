@@ -65,7 +65,7 @@ if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
   fail "VEREFI_NODE_AND_NPM_REQUIRED=true"
 fi
 
-for target in .gitignore package.json package-lock.json tests tests/e2e; do
+for target in .gitignore package.json package-lock.json tests tests/e2e tests/e2e/pageObj; do
   require_regular_or_missing "$target"
 done
 
@@ -133,7 +133,7 @@ else
 fi
 
 # Scaffold the root config and shared test directory.
-mkdir -p tests/e2e
+mkdir -p tests/e2e/pageObj
 
 cat > playwright.config.ts <<EOF
 import { defineConfig, devices } from '@playwright/test';
@@ -177,3 +177,4 @@ echo "TESTDIR=tests/e2e"
 echo "✓ Scaffolded root Playwright setup (Chromium only for v1)"
 echo "  - playwright.config.ts"
 echo "  - tests/e2e/"
+echo "  - tests/e2e/pageObj/"

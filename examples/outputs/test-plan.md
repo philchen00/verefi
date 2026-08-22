@@ -1,215 +1,226 @@
-# Test Plan: Swag Labs login, catalog sort, and checkout
+# Test Plan: Saucedemo Login, Product Browsing/Sorting, and Checkout
 
 **Run**: `saucedemo-checkout`
-**Created**: 2026-08-15
+**Created**: 2026-08-21
 **Status**: Approved
-**Human approval**: Approved by Demo Maintainer on 2026-08-15
-**Input**: "examples/inputs/saucedemo-checkout-feature.md"
+**Human approval**: Approved by Phil Chen on 2026-08-21
+**Input**: "Users can log in, browse and sort products, and check out https://www.saucedemo.com"
 
 ## Section 1 — Test Cases
 
-### TC-001: Successful login with a valid account
+### TC-001: Successful login with valid standard user
 
 **Type:** Happy Path
-**Priority:** P1 — every other test case depends on being able to log in
-**Data impact:** Read-only — creates only a disposable authenticated demo session
+**Priority:** P1 — login is the entry point for every other flow in this plan
+**Data impact:** Read-only — no account state is mutated by logging in
 
-**Given:** The user is on the login page (`/`)
-**When:** They supply the dedicated demo credentials named by `E2E_USERNAME` and `E2E_PASSWORD`, then click Login
-**Then:** They land on the product catalog
+**Given:** The user is on the Saucedemo login page and has a valid standard test account
+**When:** The user enters a valid username and password and submits the login form
+**Then:** The user is redirected to the products/inventory page and sees the product list
 
 **Acceptance Criteria:**
-- [ ] URL changes to `/inventory.html`
-- [ ] Page title (`[data-testid="title"]`) reads "Products"
-- [ ] Six `[data-testid="inventory-item"]` elements are visible
+- [ ] URL changes to the inventory/products page after submit
+- [ ] The product grid is visible with at least one product
+- [ ] No error message is displayed
 
----
-
-### TC-002: Locked-out account is rejected with a specific error
+### TC-002: Login blocked for a locked-out user
 
 **Type:** Negative
-**Priority:** P1 — silent or generic auth failures are a common real bug class
-**Data impact:** Read-only — rejected demo login only
+**Priority:** P2 — verifies account-lockout messaging works, a common support-ticket source
+**Data impact:** Read-only
+
+**Given:** The user is on the login page and has credentials for an account known to be locked out
+**When:** The user enters the locked-out username and correct password and submits
+**Then:** Login is rejected and a locked-out error message is shown; the user remains on the login page
+
+**Acceptance Criteria:**
+- [ ] URL remains on the login page
+- [ ] An error message mentioning the account being locked out is visible
+
+### TC-003: Login rejected with invalid credentials
+
+**Type:** Negative
+**Priority:** P2 — core negative-auth guardrail
+**Data impact:** Read-only
 
 **Given:** The user is on the login page
-**When:** They supply the dedicated locked-out demo account named by `E2E_LOCKED_OUT_USERNAME` with `E2E_PASSWORD`, then click Login
-**Then:** Login is rejected and the reason is shown, not just a generic failure
+**When:** The user enters a username/password combination that does not match any account
+**Then:** Login is rejected and a generic invalid-credentials error is shown
 
 **Acceptance Criteria:**
-- [ ] URL remains `/` (no navigation to the catalog)
-- [ ] `[data-testid="error"]` reads "Epic sadface: Sorry, this user has been locked out."
+- [ ] URL remains on the login page
+- [ ] An error message indicating invalid username/password is visible
 
----
-
-### TC-003: Invalid credentials are rejected with a specific error
+### TC-004: Login rejected with empty username and/or password
 
 **Type:** Negative
+**Priority:** P3 — basic client-side validation check
+**Data impact:** Read-only
+
+**Given:** The user is on the login page
+**When:** The user submits the login form with the username field, the password field, or both left blank
+**Then:** Login is rejected and a field-required error is shown
+
+**Acceptance Criteria:**
+- [ ] URL remains on the login page
+- [ ] An error message indicating the missing required field(s) is visible
+
+### TC-005: Product list displays all catalog items after login
+
+**Type:** Happy Path
+**Priority:** P1 — core browse flow
+**Data impact:** Read-only
+
+**Given:** The user is logged in with a valid standard account
+**When:** The products page loads
+**Then:** All catalog products are displayed, each with a name, price, image, and "Add to cart" action
+
+**Acceptance Criteria:**
+- [ ] The number of rendered product cards matches the known catalog size
+- [ ] Each product card shows a name, a price, and an add-to-cart control
+
+### TC-006: Sort products by Name (A to Z)
+
+**Type:** Happy Path
+**Priority:** P2 — validates the sort control, part of the requested "sort products" flow
+**Data impact:** Read-only
+
+**Given:** The user is on the products page with the default sort applied
+**When:** The user selects the "Name (A to Z)" sort option
+**Then:** Products are re-ordered alphabetically ascending by name
+
+**Acceptance Criteria:**
+- [ ] Rendered product names are in strict ascending alphabetical order after sorting
+
+### TC-007: Sort products by Name (Z to A)
+
+**Type:** Happy Path
 **Priority:** P2
-**Data impact:** Read-only — rejected demo login only
+**Data impact:** Read-only
 
-**Given:** The user is on the login page
-**When:** They supply `E2E_USERNAME` with the intentionally invalid value named by `E2E_INVALID_PASSWORD`, then click Login
-**Then:** Login is rejected with a message distinct from the locked-out case
+**Given:** The user is on the products page
+**When:** The user selects the "Name (Z to A)" sort option
+**Then:** Products are re-ordered alphabetically descending by name
 
 **Acceptance Criteria:**
-- [ ] URL remains `/`
-- [ ] `[data-testid="error"]` reads "Epic sadface: Username and password do not match any user in this service"
+- [ ] Rendered product names are in strict descending alphabetical order after sorting
 
----
+### TC-008: Sort products by Price (low to high)
 
-### TC-004: Sorting by price (low to high) reorders the catalog
+**Type:** Happy Path
+**Priority:** P2
+**Data impact:** Read-only
+
+**Given:** The user is on the products page
+**When:** The user selects the "Price (low to high)" sort option
+**Then:** Products are re-ordered by ascending price
+
+**Acceptance Criteria:**
+- [ ] Rendered product prices are in non-decreasing numeric order after sorting
+
+### TC-009: Sort products by Price (high to low)
+
+**Type:** Happy Path
+**Priority:** P2
+**Data impact:** Read-only
+
+**Given:** The user is on the products page
+**When:** The user selects the "Price (high to low)" sort option
+**Then:** Products are re-ordered by descending price
+
+**Acceptance Criteria:**
+- [ ] Rendered product prices are in non-increasing numeric order after sorting
+
+### TC-010: Add a single product to the cart and verify the cart badge
+
+**Type:** Happy Path
+**Priority:** P1 — prerequisite for checkout
+**Data impact:** Creates isolated test data — adds an item to the in-session cart (client-side/session-scoped on this demo site, not a real backend order); cleanup is implicit on session/browser-context teardown, no explicit rollback action exists on the site
+
+**Given:** The user is logged in and viewing the product list
+**When:** The user clicks "Add to cart" on one product
+**Then:** The cart badge count increments to 1 and the button state changes to "Remove"
+
+**Acceptance Criteria:**
+- [ ] Cart icon badge shows "1"
+- [ ] The product's action button now reads "Remove"
+
+### TC-011: Complete end-to-end checkout with one item
+
+**Type:** Happy Path
+**Priority:** P1 — the primary purchase flow named in the request
+**Data impact:** Creates isolated test data — this demo site simulates checkout entirely client-side; no real payment is processed and no server-side order record persists beyond the session, so no cleanup/rollback action is required
+
+**Given:** The user is logged in and has added one product to the cart
+**When:** The user opens the cart, proceeds to checkout, enters shipping information (first name, last name, postal code) using fictional test values, continues through the order overview, and finishes the order
+**Then:** The order completes and a confirmation message is shown
+
+**Acceptance Criteria:**
+- [ ] Confirmation page displays a "Thank you" / order-complete message
+- [ ] Cart badge is cleared (0 or hidden) after order completion
+
+### TC-012: Checkout blocked when required shipping info is missing
+
+**Type:** Negative
+**Priority:** P2 — checkout form validation guardrail
+**Data impact:** Read-only — form is never successfully submitted
+
+**Given:** The user is logged in, has an item in the cart, and is on the checkout information step
+**When:** The user leaves one or more of first name, last name, or postal code blank and clicks continue
+**Then:** Checkout is blocked and a field-required error is shown; the user remains on the checkout information step
+
+**Acceptance Criteria:**
+- [ ] URL remains on the checkout information step
+- [ ] An error message identifying the missing required field is visible
+
+### TC-013: Remove a product from the cart before checkout
 
 **Type:** Edge Case
-**Priority:** P2
-**Data impact:** Read-only — changes only the in-session catalog sort selection
+**Priority:** P3 — validates cart mutation outside the main happy path
+**Data impact:** Creates isolated test data — adds then removes an item within the same session; no persistent state remains after removal
 
-**Given:** The user is on the catalog page with the default "Name (A to Z)" sort
-**When:** They select "Price (low to high)" from `[data-testid="product-sort-container"]`
-**Then:** The six products re-render in ascending price order
-
-**Acceptance Criteria:**
-- [ ] All six products are still present after sorting — no drops or duplicates, same set as before the sort
-- [ ] `[data-testid="inventory-item-price"]` values are non-decreasing top to bottom
-- [ ] First item is $7.99 (Sauce Labs Onesie), last is $49.99 (Sauce Labs Fleece Jacket)
-
----
-
-### TC-005: Adding a product to the cart updates the badge and the button
-
-**Type:** Happy Path
-**Priority:** P1
-**Data impact:** Changes disposable demo cart state; no customer or payment data
-
-**Given:** The user is on the catalog page with an empty cart
-**When:** They click `[data-testid="add-to-cart-sauce-labs-backpack"]`
-**Then:** The cart badge appears and the button becomes a Remove action
+**Given:** The user is logged in and has added a product to the cart
+**When:** The user opens the cart and removes the item
+**Then:** The item is no longer listed in the cart and the cart badge reflects zero items
 
 **Acceptance Criteria:**
-- [ ] `[data-testid="shopping-cart-badge"]` reads "1"
-- [ ] The clicked button's `data-testid` changes to `remove-sauce-labs-backpack`, text "Remove"
+- [ ] Cart badge shows "0" or is hidden after removal
+- [ ] The removed product no longer appears in the cart list
 
----
+### TC-014: Logout ends the session and returns to the login page
 
-### TC-006: Removing a product from the cart clears the badge
+**Type:** Edge Case
+**Priority:** P3 — session-boundary check, not explicitly requested but low-cost coverage of the login/logout pair
+**Data impact:** Read-only
 
-**Type:** Happy Path
-**Priority:** P2
-**Data impact:** Changes disposable demo cart state; no customer or payment data
-
-**Given:** The Sauce Labs Backpack is in the cart (badge reads "1")
-**When:** The user clicks `[data-testid="remove-sauce-labs-backpack"]`
-**Then:** The item is removed and the cart returns to empty
+**Given:** The user is logged in and on the products page
+**When:** The user opens the side menu and selects logout
+**Then:** The session ends and the user is returned to the login page
 
 **Acceptance Criteria:**
-- [ ] `[data-testid="shopping-cart-badge"]` is no longer present
-- [ ] The button reverts to `[data-testid="add-to-cart-sauce-labs-backpack"]`, text "Add to cart"
-
----
-
-### TC-007: Cart page lists added items correctly
-
-**Type:** Happy Path
-**Priority:** P1
-**Data impact:** Reads a disposable demo cart created within the same test session
-
-**Given:** The Sauce Labs Backpack has been added to the cart
-**When:** The user opens `[data-testid="shopping-cart-link"]`
-**Then:** The cart page shows the item with correct name, price, and quantity
-
-**Acceptance Criteria:**
-- [ ] URL changes to `/cart.html`
-- [ ] `[data-testid="inventory-item-name"]` reads "Sauce Labs Backpack"
-- [ ] `[data-testid="inventory-item-price"]` reads "$29.99"
-- [ ] `[data-testid="item-quantity"]` reads "1"
-
----
-
-### TC-008: Checkout step one requires all three fields
-
-**Type:** Negative
-**Priority:** P2
-**Data impact:** Read-only — validation values stay within the disposable demo session
-
-**Given:** The user is on `/checkout-step-one.html` with an item in the cart
-**When:** They click `[data-testid="continue"]` with one or more of First Name, Last Name, and Postal Code blank
-**Then:** Checkout is blocked with a field-specific validation error naming the first blank field encountered
-
-**Acceptance Criteria:**
-- [ ] All fields blank: URL remains `/checkout-step-one.html`, `[data-testid="error"]` reads "Error: First Name is required"
-- [ ] First Name filled, Last Name and Postal Code blank: `[data-testid="error"]` reads "Error: Last Name is required"
-- [ ] First Name and Last Name filled, Postal Code blank: `[data-testid="error"]` reads "Error: Postal Code is required"
-
----
-
-### TC-009: Checkout overview shows correct item total, tax, and total
-
-**Type:** Happy Path
-**Priority:** P1 — price math is exactly the kind of thing a fixed example test should pin down
-**Data impact:** Changes disposable demo cart and checkout-session state; no payment data
-
-**Given:** The Sauce Labs Backpack ($29.99) is the only item in the cart, and checkout step one is complete
-**When:** The checkout overview (`/checkout-step-two.html`) loads
-**Then:** The summary shows the item, an 8% tax line, and a total that is the sum of both
-
-**Acceptance Criteria:**
-- [ ] `[data-testid="subtotal-label"]` reads "Item total: $29.99"
-- [ ] `[data-testid="tax-label"]` reads "Tax: $2.40"
-- [ ] `[data-testid="total-label"]` reads "Total: $32.39"
-
----
-
-### TC-010: Completing checkout shows a confirmation message
-
-**Type:** Happy Path
-**Priority:** P1
-**Data impact:** Creates a disposable demo order state only; no payment, customer, or fulfillment data
-
-**Given:** The user is on the checkout overview page
-**When:** They click `[data-testid="finish"]`
-**Then:** The order completes and a confirmation is shown
-
-**Acceptance Criteria:**
-- [ ] URL changes to `/checkout-complete.html`
-- [ ] `[data-testid="complete-header"]` reads "Thank you for your order!"
-- [ ] `[data-testid="back-to-products"]` button is visible
-
----
-
-### TC-011: Full purchase happy path, end to end
-
-**Type:** Happy Path
-**Priority:** P1 — the scenario that actually matters to a real user
-**Data impact:** Creates a disposable demo order state only; start with a fresh session and leave no account-specific data behind
-
-**Given:** The user starts logged out
-**When:** They log in, add the Sauce Labs Backpack to the cart, go to the cart, proceed through all three checkout steps with valid info, and finish
-**Then:** They land on the confirmation page having never seen an error
-
-**Acceptance Criteria:**
-- [ ] No `[data-testid="error"]` appears after any of the five transitions: catalog, cart, checkout step one, checkout step two, confirmation
-- [ ] Confirmation page is reached (`/checkout-complete.html`)
-- [ ] `[data-testid="complete-header"]` reads "Thank you for your order!"
-
----
+- [ ] URL returns to the login page
+- [ ] Attempting to navigate directly back to the products page without re-authenticating redirects to login
 
 ## Section 2 — Implementation Notes
 
-- **Selector strategy:** `data-testid` per `references/playwright.instructions.md`'s default priority — unconfirmed against the live app at plan-writing time. *(See `discovery.md`: this assumption turned out to be wrong — the app uses `data-test`, not `data-testid`.)*
-- **Target safety:** Approved remote host: `www.saucedemo.com`; approved by: Demo Maintainer; scope: the public Swag Labs demo login, catalog, cart, and checkout flows only. Runtime requires `E2E_ALLOW_REMOTE=www.saucedemo.com`; do not run against production or customer accounts.
-- **Base URL:** `BASE_URL` at runtime; the approved demo value is `https://www.saucedemo.com`. Do not hardcode a remote URL in generated tests or config.
-- **Authentication / credentials:** dedicated public-demo account identifiers and values are supplied only through `E2E_USERNAME`, `E2E_PASSWORD`, `E2E_LOCKED_OUT_USERNAME`, and `E2E_INVALID_PASSWORD`. Their values are intentionally not recorded here.
-- **Destructive actions and cleanup:** TC-005 through TC-011 change only disposable cart/order state in the public demo. No payment, customer, or fulfillment data is used; begin each test with a fresh demo session and leave no account-specific data behind.
-- **Test files to create:** `tests/e2e/saucedemo-checkout.spec.ts` — all test cases (current `implement` convention is one spec file per run)
-- **Key fixtures or shared setup:** A `login(page, username, password)` helper used by every test case except TC-001–TC-003, which exercise login itself.
+- **Selector strategy:** stable test-id attribute (exact attribute name — `data-testid`, `data-test`, `data-cy`, etc. — TBD until `/verefi:discover` confirms it; Saucedemo is publicly known to use `data-test` on most interactive elements, but this must be verified against the live DOM, not assumed) > aria-label > role > text
+- **Target safety:** Approved remote host: `www.saucedemo.com`; approved by: Phil Chen (repo owner, automated E2E validation of the Verefi pipeline itself); scope: read-only login/browse/sort flows plus the client-side-only checkout flow (TC-010–TC-013), using only this site's own published demo credentials (`standard_user`/`secret_sauce`, `locked_out_user`). No real payment is processed and no server-side order persists on this practice site. `E2E_ALLOW_REMOTE=www.saucedemo.com` must be supplied at runtime (never committed to code or CI config).
+- **Base URL:** `BASE_URL` at runtime; default for local dev would be `http://127.0.0.1:3000`, but this plan targets the remote demo site, so `BASE_URL` should be set to `https://www.saucedemo.com` only once the remote-host approval above is completed.
+- **Authentication / credentials:** Dedicated non-production test account via named environment variables — `E2E_USERNAME`, `E2E_PASSWORD` (for the standard-user happy-path cases) and `E2E_LOCKED_USERNAME` for TC-002. These environment variables are populated with this public demo site's own published demo accounts (`standard_user` / `secret_sauce` for `E2E_USERNAME`/`E2E_PASSWORD`, `locked_out_user` for `E2E_LOCKED_USERNAME`) — these are not real secrets, they are documented on saucedemo.com's own login page, but must still be supplied only via environment variables at runtime, never hardcoded in test code.
+- **Destructive actions and cleanup:** None — all cart/checkout actions in this plan operate on this demo site's client-side/session-scoped state only; no real backend order, payment, or persistent account data is created. No cleanup or rollback action exists or is needed.
+- **Test files to create:** `tests/e2e/saucedemo-checkout.spec.ts` (all test cases, organized into `test.describe` blocks by feature area) plus `tests/e2e/pageObj/*.ts` (one page-object class per page/view)
+- **Key fixtures or shared setup:** A shared login helper that performs TC-001's login flow using `E2E_USERNAME`/`E2E_PASSWORD` and lands on the products page, reused as a `beforeEach` precondition for TC-005–TC-014.
 
 **Test Data** (if the test cases reference shared variables):
 
-| Variable | Source | Safety notes |
+| Variable | Safe example value | Source / safety notes |
 |---|---|---|
-| valid_username | `E2E_USERNAME` | Dedicated public-demo account; value is not written to plans, reports, or source control |
-| valid_password | `E2E_PASSWORD` | Dedicated public-demo secret; value is never recorded |
-| locked_out_username | `E2E_LOCKED_OUT_USERNAME` | Dedicated demo negative-path account; value is never recorded |
-| invalid_password | `E2E_INVALID_PASSWORD` | Intentionally invalid demo input; value is never recorded |
+| E2E_USERNAME | (not stored here) | Environment variable pointing to a dedicated non-production standard test account |
+| E2E_PASSWORD | (not stored here) | Environment variable; never logged or printed |
+| E2E_LOCKED_USERNAME | (not stored here) | Environment variable for the locked-out-account negative case (TC-002) |
+| checkout_first_name | "Test" | Fictional value, safe to hardcode in test code |
+| checkout_last_name | "User" | Fictional value, safe to hardcode in test code |
+| checkout_postal_code | "94107" | Fictional value, safe to hardcode in test code |
 
 ## Section 3 — Open Questions
 
@@ -217,7 +228,9 @@ None
 
 ## Section 4 — Out of Scope
 
-- Other vendor-provided demo account states — deliberately varied variants for exploring bug classes, not part of this feature's core flow
-- "Generate PDF order" on the confirmation page
-- The hamburger menu's "Reset App State" and "About" links
-- Cross-browser testing beyond Chromium, and mobile/responsive layout
+- Multi-item cart scenarios (adding/removing more than one product at once) beyond the single-item flows in TC-010/TC-011/TC-013
+- Visual/UI regression testing (e.g. the intentionally-broken `visual_user`/`problem_user` demo accounts)
+- Performance or load testing (e.g. the `performance_glitch_user` demo account)
+- Payment processing correctness — this demo site does not implement real payment processing, so no payment-validation cases are included
+- Cross-browser or mobile-viewport coverage
+- Accessibility (a11y) auditing
