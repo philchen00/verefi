@@ -15,10 +15,11 @@ add items to a cart, and check out.
 
 - **Login** (`/`) — username + password. Use dedicated demo account states
   supplied at runtime through `E2E_USERNAME`, `E2E_PASSWORD`, and
-  `E2E_LOCKED_OUT_USERNAME`; do not record their values in this feature
-  description. A locked-out account or an intentionally invalid credential
-  pair each show a distinct, specific error message and keep the user on the
-  login page.
+  `E2E_LOCKED_USERNAME`; do not record their values in this feature
+  description. A locked-out account, an intentionally invalid credential
+  pair, or a blank required field each show a distinct, specific error
+  message and keep the user on the login page. A side-menu logout ends the
+  session and returns to the login page.
 - **Product catalog** (`/inventory.html`) — six products, each with a
   name, description, price, and an "Add to cart" button that becomes
   "Remove" once added. A sort dropdown reorders the list by name (A–Z,
@@ -37,7 +38,6 @@ add items to a cart, and check out.
 
 ## Scope for this test plan
 
-Cover login (including the two error paths), the price-sort control, the
-add/remove-from-cart cycle, the cart's contents, checkout's required-field
-validation, the price math on the order summary, and the full purchase
-happy path end-to-end.
+Cover login (including its error paths), all four sort orders, the
+add/remove-from-cart cycle, checkout's required-field validation, logout,
+and the full purchase happy path end-to-end.

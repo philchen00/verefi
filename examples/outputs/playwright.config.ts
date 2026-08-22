@@ -17,9 +17,10 @@ if (!isLoopback && process.env.E2E_ALLOW_REMOTE !== target.hostname) {
 // VEREFI_GUARD_END
 
 export default defineConfig({
-  testDir: './tests',
+  testDir: './tests/e2e',
   use: {
     baseURL: target.toString(),
+    testIdAttribute: 'data-test',
   },
   retries: process.env.CI ? 2 : 0,
   reporter: 'list',

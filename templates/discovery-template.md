@@ -25,16 +25,26 @@ Formatting rules (apply when filling this template):
 
 ## Section 1 — Verified Selectors
 
-One row per element referenced by the test plan. If the test plan covers more than one role/persona, use one `### [Role]` subsection per role first — the same-looking screen can behave or render differently per role, so don't assume one pass covers all of them. Within a role, group by page/view.
+One row per element referenced by the test plan, grouped by page/view — this heading is the 1:1 key `implement` uses to generate one page-object class per page/view, so keep the heading level consistent with the two cases below rather than improvising a third.
 
-### [Role name, or omit this heading if single-role] 
+**Single role** (the common case): omit any role heading and use the page/view heading directly at `###`:
 
-#### [Page or View Name] — `[path]`
+### [Page or View Name] — `[path]`
 
 | Test Case(s) | Element | Selector | Notes |
 |---|---|---|---|
 | TC-001 | [element description, e.g. "destination input"] | `getByTestId('[value]')` if the header's Test ID attribute is literally `data-testid`, otherwise `page.locator('[<attribute>="[value]"]')` | [anything worth flagging, or "—"] |
 | TC-002 | [element with no test-id but a confirmed role/name] | `getByRole('<role>', { name: '<name>' })` | **Fallback selector, not a test-id** — flag for `implement` to add a fragility comment |
+
+**Multiple roles/personas**: the same-looking screen can behave or render differently per role, so don't assume one pass covers all of them — add one `### [Role name]` heading per role first, with `#### [Page or View Name] — `[path]`` nested one level under each:
+
+### [Role name]
+
+#### [Page or View Name] — `[path]`
+
+| Test Case(s) | Element | Selector | Notes |
+|---|---|---|---|
+| TC-001 | [element description] | `getByTestId('[value]')` or `page.locator('[<attribute>="[value]"]')` | [anything worth flagging, or "—"] |
 
 <!-- Repeat the page/view block above for each page visited, and the role block for each role. -->
 

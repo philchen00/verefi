@@ -119,6 +119,18 @@ tree:
 - If the repo already has a root `playwright.config.*`, the script reuses it and prints `PLAYWRIGHT_CONFIG=<path>` plus `VEREFI_RUNTIME_GUARD_REQUIRED=true` — read that exact config to find its `testDir` (Playwright defaults to the config's directory when `testDir` is unset). Before generating or running a spec, add or verify an equivalent `BASE_URL` loopback default and exact-host `E2E_ALLOW_REMOTE` guard in that existing config, preserving its language/module format. If that cannot be done safely, stop rather than generating a runnable unguarded suite.
 - Otherwise it adds the pinned `@playwright/test` to the root `package.json` (creating a minimal one only if the repo has none), installs Chromium, and scaffolds `playwright.config.ts` with `testDir: './tests/e2e'`, a loopback `BASE_URL` default, and a remote hostname guard — it prints `TESTDIR=tests/e2e`.
 
+Regardless of which branch ran, ensure `<testDir>/pageObj/` exists before Step 3 writes anything. The reused-config branch never runs any `mkdir` — it only reused an existing config and exited — so this check cannot be skipped just because a config already existed:
+
+```bash
+if [ -L "$TESTDIR/pageObj" ]; then
+  echo "Refusing to use a symlinked path: $TESTDIR/pageObj" >&2
+  exit 1
+fi
+mkdir -p "$TESTDIR/pageObj"
+```
+
+This mirrors the symlink-safety check `create-playwright.sh` already applies to its own scaffolded paths. It's idempotent and safe to run even on the freshly-scaffolded branch, which will already have the directory after this step.
+
 ## Step 2b — Match `testIdAttribute` to the app's real convention *before* writing a single locator
 
 This is the fix for the pipeline's second-worst failure mode, right behind Step 1's "fabricated selector": generating a full suite of `page.getByTestId('x')` calls that all silently match nothing because the app's real attribute isn't Playwright's default `data-testid`. That failure mode is easy to hit even with a fully-populated `discovery.md`, because *verifying an attribute exists in the DOM* and *verifying `getByTestId()` will resolve it* are two different checks — the first doesn't imply the second. Do the config check now, not after the first test run fails.
@@ -139,14 +151,43 @@ You are an expert Playwright test engineer. Read `${CLAUDE_PLUGIN_ROOT}/referenc
 
 ## Output structure
 
+Generated suites use the Page Object Model — see `references/playwright.instructions.md`'s "Page Object Model" section for the full conventions. One representative pair:
+
 ```typescript
+// pageObj/LoginPage.ts
+import type { Locator, Page } from '@playwright/test';
+
+export class LoginPage {
+  readonly usernameInput: Locator;
+  readonly submitButton: Locator;
+
+  constructor(private readonly page: Page) {
+    this.usernameInput = page.getByTestId('some-input');
+    this.submitButton = page.getByTestId('submit-button');
+  }
+
+  async goto() {
+    await this.page.goto('/path');
+  }
+
+  async submit(value: string) {
+    await this.usernameInput.fill(value);
+    await this.submitButton.click();
+  }
+}
+```
+
+```typescript
+// <name>.spec.ts
 import { test, expect } from '@playwright/test';
+import { LoginPage } from './pageObj/LoginPage';
 
 test.describe('Feature Area', () => {
   test('TC-001: description of the scenario under test', async ({ page }) => {
-    await page.goto('/path');
-    await page.getByTestId('some-input').fill('value');
-    await page.getByTestId('submit-button').click();
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
+    await loginPage.submit('value');
+
     await page.waitForURL('**/next-path**');
     await expect(page.getByTestId('result-heading')).toContainText('value');
   });
@@ -155,13 +196,20 @@ test.describe('Feature Area', () => {
 
 ## Files to write
 
-- `<testDir>/<name>.spec.ts` — one spec file per run, named after the run name (i.e. the branch), inside the shared `testDir` from Step 2. This keeps parallel feature branches additive: two branches each generate a differently-named spec and both merge to main without conflict. If the file already exists for this run, update it in place rather than writing a second copy elsewhere.
+- `<testDir>/pageObj/<PascalCaseName>Page.ts` — one page-object class per page/view grouping in `discovery.md` Section 1 (or `audit.md`'s Section 1 groupings when there's no `discovery.md`), named `<PascalCaseName>Page` after that heading (e.g. discovery.md's "Product Catalog" heading → `pageObj/ProductCatalogPage.ts`, class `ProductCatalogPage`). Each class:
+  - takes `page: Page` in its constructor and stores it as a `private readonly` field
+  - declares one `readonly Locator` property per verified selector for that page/view, initialized in the constructor, following the locator-priority rules in `references/playwright.instructions.md`
+  - adds action methods for interactions confined to that single page/view (e.g. `login()`, `addToCart(slug)`) — never assertions, and never a method that reaches across another page/view's concerns
+  - if the same page/view heading appears under more than one `### [Role]` discovery.md subsection with materially different selectors, generate one class per role instead of merging them — full duplication (e.g. `AdminDashboardPage`, `ShopDeviceDashboardPage`), never a shared base class or in-constructor role branching
+  - never ends in `.spec.ts` or `.test.ts` — Playwright's default `testMatch` would otherwise pick it up as an empty test file
+  - if this run is scoped with `--tc TC-001`, never wholesale-regenerate a `pageObj/*.ts` file that already exists — only create classes that don't exist yet, or add missing properties/methods to existing ones, mirroring the spec-file update-in-place rule below. A human may have hand-edited that class since the last run.
+- `<testDir>/<name>.spec.ts` — one spec file per run, named after the run name (i.e. the branch), inside the shared `testDir` from Step 2. This keeps parallel feature branches additive: two branches each generate a differently-named spec and both merge to main without conflict. If the file already exists for this run, update it in place rather than writing a second copy elsewhere. Assertions, `[KNOWN BUG]` markers, `test.fixme()` calls, and any multi-page orchestration helper that composes more than one page-object class all stay in this file, not in `pageObj/`.
 
-Do **not** write tests into `.verefi/` — that directory is a gitignored scratch workspace for review artifacts, and anything in it evaporates.
+Do not write tests, assertions, or gap/bug markers inside any `pageObj/*.ts` file — those are spec-file (test-level) concerns; a page object only provides access and single-page actions. Do **not** write tests into `.verefi/` — that directory is a gitignored scratch workspace for review artifacts, and anything in it evaporates.
 
 ## After writing
 
-Confirm the paths of written files and where each selector came from (discovery / audit / guess). State the Step 2b outcome explicitly — the test-id attribute found and whether the exact `PLAYWRIGHT_CONFIG` needed a `testIdAttribute` change (or already matched). If `discovery.md` had non-"None" Gaps or Behavioral Findings (Step 1b), list them explicitly here — do not let them be implied only by a comment in the spec file. **List every `test.fixme()` generated for a no-fallback gap by name (TC-### and the blocking element)** — these are tests that won't run until the app is instrumented, and burying that in the file is how a suite quietly ends up smaller than it looks. **Separately, list every `[KNOWN BUG]` test generated under Step 1c by name, state plainly that they are expected to FAIL when `/verefi:execute` runs, and say whether you were able to propose an app-code fix or only file/recommend a bug report** — this is not optional framing, since the entire point of Step 1c is that this signal must survive being skimmed, not just exist somewhere in the file. Remind the user to:
+Confirm the paths of written files and where each selector came from (discovery / audit / guess). **List every `pageObj/*.ts` file written or updated, and which discovery.md/audit.md heading each maps to.** State the Step 2b outcome explicitly — the test-id attribute found and whether the exact `PLAYWRIGHT_CONFIG` needed a `testIdAttribute` change (or already matched). If `discovery.md` had non-"None" Gaps or Behavioral Findings (Step 1b), list them explicitly here — do not let them be implied only by a comment in the spec file. **List every `test.fixme()` generated for a no-fallback gap by name (TC-### and the blocking element)** — these are tests that won't run until the app is instrumented, and burying that in the file is how a suite quietly ends up smaller than it looks. **Separately, list every `[KNOWN BUG]` test generated under Step 1c by name, state plainly that they are expected to FAIL when `/verefi:execute` runs, and say whether you were able to propose an app-code fix or only file/recommend a bug report** — this is not optional framing, since the entire point of Step 1c is that this signal must survive being skimmed, not just exist somewhere in the file. Remind the user to:
 1. Review the generated spec file — it's meant to be committed and reviewed in a PR
 2. Follow up on any reported gaps/behavioral findings — they may need a test-plan revision, app instrumentation, or a bug report, not just a passing test
 3. Treat any `[KNOWN BUG]` test's failure in `/verefi:execute` as expected and correct, not as something to "fix" by loosening the assertion — the fix belongs in the app (or a filed bug report), never in the test
