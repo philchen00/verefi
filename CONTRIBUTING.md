@@ -16,8 +16,71 @@ reliable, safer, and easier to review are especially welcome.
    claude plugin validate --strict .claude-plugin/plugin.json
    ```
 
-5. If you change a published plugin behavior, update the plugin version and the
+5. Run the structural invariant checks (see below):
+
+   ```bash
+   ./scripts/tests/run-invariant-tests.sh
+   ./scripts/check-invariants.sh \
+     --plan examples/outputs/test-plan.md \
+     --spec examples/outputs/tests/e2e/saucedemo-checkout.spec.ts \
+     --pageobj-dir examples/outputs/tests/e2e/pageObj
+   ```
+
+6. If you change a published plugin behavior, update the plugin version and the
    matching marketplace entry so installed users can receive the release.
+
+## Testing a skill change
+
+Verefi's "code" is markdown interpreted by an LLM, so the same instructions
+legitimately produce different concrete output run to run. That makes a
+golden-file diff the wrong tool: it reports different-but-equally-valid wording
+as a regression, which is the false-positive signal that trains people to ignore
+the check. Evaluation is split into layers instead.
+
+**Structural invariants** (`scripts/check-invariants.sh`) — properties that must
+hold for *any* correct run, regardless of wording, ordering, or which valid
+selector was chosen. They cover plan structure, the N6 review tiers (no
+`Auto-cleared` case may be P1 or non-read-only; header counts must match the
+per-case tally; every classification must state a reason), approval-gate
+consistency, and spec/plan cross-checks (every plan case has a test, every test
+traces to a plan case, no `test.fail()`, no page object named like a test file).
+Checks whose artifact you didn't pass report `SKIP`, never `PASS`.
+
+Run it against any artifact set:
+
+```bash
+./scripts/check-invariants.sh --plan .verefi/<name>/test-plan.md \
+  --spec tests/e2e/<name>.spec.ts --pageobj-dir tests/e2e/pageObj
+```
+
+**Approval-field integrity** (`--approval-baseline`) — the one property that
+cannot be checked from a single file. Copy the plan before running a skill
+stage, then compare:
+
+```bash
+cp .verefi/<name>/test-plan.md /tmp/plan-before.md
+# ...run the skill stage...
+./scripts/check-invariants.sh --plan .verefi/<name>/test-plan.md \
+  --approval-baseline /tmp/plan-before.md
+```
+
+No skill may ever write `**Status**` or `**Human approval**`. An agent that
+fills those in produces a plan whose contents are *correct* and which therefore
+satisfies every static check — "accurate" is not the property an approval field
+carries, "a person asserted this" is. Only the diff tells them apart.
+
+**The checker's own self-test** (`scripts/tests/run-invariant-tests.sh`) — a
+checker that only ever runs green is indistinguishable from one that checks
+nothing, so every negative case asserts the specific invariant id that must
+fail, not merely a non-zero exit. Add a case here whenever you add an invariant.
+Fixtures live in `scripts/tests/fixtures/` and are mutated in a scratch dir;
+they are never modified in place.
+
+**Quality grading** of the genuinely subjective parts (is this test case
+well-prioritized, is this selector choice reasonable given the gap) is left to
+`claude plugin eval` rather than reimplemented here. It was still early access
+on this account as of 2026-08-23; when it lands, eval cases belong under
+`evals/` as `prompt.md` + `graders/*.md`.
 
 ## Development notes
 

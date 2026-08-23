@@ -31,7 +31,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       # shellcheck ships preinstalled on GitHub's ubuntu-latest runners.
       - name: Shellcheck
-        run: shellcheck scripts/*.sh
+        run: shellcheck scripts/*.sh scripts/tests/*.sh
 
   guard-drift:
     name: Check remote-host guard stays in sync
@@ -44,3 +44,26 @@ jobs:
       # This fails the build if the two copies ever diverge unnoticed.
       - name: Check guard blocks match
         run: ./scripts/check-guard-drift.sh
+
+  invariants:
+    name: Structural invariants
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      # The checker's own self-test runs first and gates everything below it.
+      # A checker that only ever runs green is indistinguishable from one that
+      # checks nothing, so each negative case asserts the specific invariant id
+      # that must fail — not merely a non-zero exit.
+      - name: Self-test the invariant checker
+        run: ./scripts/tests/run-invariant-tests.sh
+
+      # Then apply it to the committed example artifacts, which the README
+      # presents as real reviewed output. Tier checks skip automatically on a
+      # plan that carries no tier fields.
+      - name: Check example artifacts
+        run: |
+          ./scripts/check-invariants.sh \
+            --plan examples/outputs/test-plan.md \
+            --spec examples/outputs/tests/e2e/saucedemo-checkout.spec.ts \
+            --pageobj-dir examples/outputs/tests/e2e/pageObj
