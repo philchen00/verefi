@@ -50,6 +50,12 @@ The template has four sections:
 
 Keep the plan at `**Status**: Draft` and `**Human approval**: Pending`. Never promote either field yourself. A human must review the cases, target, test data, and data-impact notes, resolve all `TODO(...)` entries and Open Questions, then explicitly change the fields to the approved values described in the template. `/verefi:implement` must refuse to write test code until that review gate is complete.
 
+## Review tiers — write them unclassified, never guess one
+
+Every test case gets a `**Review tier:**` field, and at this stage every one of them is `Unclassified — pending evidence`. Leave `**Review triage**` in the header at `Pending` too.
+
+This isn't a formality to fill in later if convenient — a tier is a claim about evidence, and `testplan` has none. It never looks at the app or its source: its selectors are educated guesses by construction, which is exactly the condition that makes a case `Needs review`. Writing `Auto-cleared` here would mean auto-clearing a case *because nothing had checked it yet*, inverting the rule. `/verefi:audit` and `/verefi:discover` fill these in once real evidence exists — see `${CLAUDE_PLUGIN_ROOT}/references/review-tiers.md` for the rule and who computes it when.
+
 ## Artifact safety check — before the first write
 
 Resolve the repository root with `git rev-parse --show-toplevel`. The only permitted artifact path is `<repo-root>/.verefi/<validated-name>/test-plan.md`; do not write relative to an arbitrary working directory or outside that root. Before creating `.verefi` or the run directory:
@@ -66,5 +72,6 @@ Confirm the path after writing. Remind the user to:
 1. Review the Test Cases section in `test-plan.md`
 2. Review `audit.md` next to it (from the parallel `/verefi:audit` run) for the app's testability grade
 3. Optionally run `/verefi:discover` to verify selectors against the running app and generate `discovery.md`
-4. Explicitly approve the plan by completing its human-approval fields after resolving TODOs/Open Questions
-5. Run `/verefi:implement` only after that human approval
+4. Expect `audit`/`discover` to classify each case's review tier, so the approval step focuses on the flagged cases rather than the whole document
+5. Explicitly approve the plan by completing its human-approval fields after resolving TODOs/Open Questions
+6. Run `/verefi:implement` only after that human approval

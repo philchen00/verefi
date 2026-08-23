@@ -10,7 +10,7 @@
       "name": "verefi",
       "source": "./",
       "description": "Turns product specs into reviewed test plans and executable Playwright tests.",
-      "version": "0.2.0"
+      "version": "0.3.0"
     }
   ]
 }

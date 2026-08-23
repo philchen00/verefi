@@ -90,8 +90,21 @@ Read the template at `${CLAUDE_PLUGIN_ROOT}/templates/audit-template.md` and fil
 
 **Record the actual test-id attribute name as a first-class fact, not just inventory rows.** Whatever the dominant attribute turned out to be in Step 1, state it explicitly at the top of Section 4 (e.g. "Test ID attribute: `data-test`"), and if it is anything other than literally `data-testid`, say so in bold — Playwright's `getByTestId()` only matches `data-testid` by default, so any other convention silently breaks every generated locator unless `implement` sets `testIdAttribute` in `playwright.config.ts` to match. This is the single highest-value fact in the whole audit for a repo that already has good coverage under a non-default attribute name — don't let it get lost in the inventory table. If conventions are mixed across the codebase, say that too, and name which areas use which attribute — `implement` will need per-area locator strategies (`page.locator('[attr="value"]')`) rather than one global config value.
 
+## Step 4 — Classify review tiers, but only if a test plan already exists
+
+Audit often runs *before* `test-plan.md` exists (it's dispatched in parallel with `testplan`, and it's also the zero-setup entry point on a repo with no plan at all). So this step is conditional:
+
+- **No `test-plan.md` for this run** → skip entirely. There is nothing to classify. Do not create a plan to have something to tier.
+- **`test-plan.md` exists** → read `${CLAUDE_PLUGIN_ROOT}/references/review-tiers.md` and apply its rule to each test case using this audit's inventory as the evidence source, then edit `test-plan.md` in place: replace each `**Review tier:**` line with the decision and its reason, and update the header's `**Review triage**` counts.
+
+Cite the evidence honestly as **static**, not live: `Auto-cleared — selectors found in source (audit.md §1), P2, read-only`. That wording matters downstream — a reviewer reading a plan tiered only from audit needs to know nothing has actually been rendered in a browser yet, and a later `/verefi:discover` run will overwrite these tiers with live-verified ones.
+
+A **Bare** grade means no case can be evidence-verified, so every case is `Needs review`. Say that in one line rather than emitting fourteen identical rows of reasoning.
+
+**Never touch `**Status**` or `**Human approval**`.** Tiers are the only field of `test-plan.md` this skill may write; `Auto-cleared` is a reading order, never an approval.
+
 ## After writing
 
-Confirm the path and state the grade in one sentence. Then route by grade:
-- **Instrumented / partially instrumented** → `/verefi:discover` (recommended — audit's inventory makes it fast, targeted verification) or straight to `/verefi:implement` accepting statically-evidenced selectors
+Confirm the path and state the grade in one sentence. If Step 4 ran, state the triage counts too. Then route by grade:
+- **Instrumented / partially instrumented** → `/verefi:discover` (recommended — audit's inventory makes it fast, targeted verification, and it re-tiers the plan against live evidence) or straight to `/verefi:implement` accepting statically-evidenced selectors
 - **Bare** → `/verefi:discover` against the running app, or instrument the Section 3 components first — warn that `implement` will refuse to fabricate selectors from nothing

@@ -164,8 +164,22 @@ Read the template at `${CLAUDE_PLUGIN_ROOT}/templates/discovery-template.md` and
 
 Write to `.verefi/<name>/discovery.md` (same `<name>` as the test plan).
 
+## Step 4 — Classify each test case's review tier
+
+Discovery is the first moment in the pipeline where real, live evidence exists for the plan's test cases — which makes it the right place to sort them by how much human review they actually need. Read `${CLAUDE_PLUGIN_ROOT}/references/review-tiers.md` and apply it now, after `discovery.md` is written:
+
+1. For each test case in `test-plan.md`, decide `Auto-cleared` or `Needs review` using that file's rule (evidence-verified **and** not P1 **and** read-only → auto-cleared; any one of those failing → needs review).
+2. Edit `test-plan.md` in place, replacing each case's `**Review tier:**` line with the decision **and its reason**, citing the evidence (e.g. `Auto-cleared — all selectors live-verified (discovery.md §1), P2, read-only`).
+3. Update the header's `**Review triage**` line with the counts and the artifact they came from.
+4. Overwrite any tier a previous `/verefi:audit` run wrote. Live verification outranks static evidence — that's the same trust hierarchy `implement` uses for selectors, applied to tiers.
+
+Then present the flagged subset for review, per that reference's "Presenting the flagged subset": stream the `Needs review` cases one at a time with what to check on each, and summarize the auto-cleared set in one line the human has to accept.
+
+**Never touch `**Status**` or `**Human approval**`.** Editing tiers is the one write into `test-plan.md` this skill is allowed to make; the approval fields stay exactly as they are, for a human to complete. `Auto-cleared` is a reading order, not an approval — if that distinction ever blurs, the gate this whole pipeline is built around has been quietly removed.
+
 ## After writing
 
 Confirm the path. Remind the user to:
 1. Review `discovery.md` — especially Section 2 (Gaps) and Section 3 (Behavioral Findings); both may need a test-plan revision or a bug report before moving on, not just a workaround in the generated test
-2. Run `/verefi:implement`, which uses `discovery.md`'s selectors as ground truth over the test plan's Implementation Notes
+2. Review the cases flagged `Needs review` in `test-plan.md` (streamed above), then complete the approval fields — including the auto-cleared count, which is how accepting those cases is recorded
+3. Run `/verefi:implement`, which uses `discovery.md`'s selectors as ground truth over the test plan's Implementation Notes

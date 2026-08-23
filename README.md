@@ -162,12 +162,14 @@ then re-run `/verefi:discover` with the same `--name` to pick up where you left 
 
 Opens the app in a real browser and writes `.verefi/saucedemo-checkout/discovery.md`. If `audit.md` exists, this is a second opinion on it. If it doesn't, like here, it's your only verification, so treat it as required rather than optional. It also catches what reading the code never shows you: multi-step flows, behavior that changes depending on who's logged in, and a running list of the test plan's assumptions that turned out to be wrong.
 
-**Required review gate before step 4.** Open `.verefi/saucedemo-checkout/test-plan.md`, resolve every `TODO(...)`, and make Section 3 — Open Questions read exactly `None`. A human reviewer must then update its metadata to these exact values:
+**Required review gate before step 4.** Open `.verefi/saucedemo-checkout/test-plan.md`, resolve every `TODO(...)`, and make Section 3 — Open Questions read exactly `None`. Step 3 will have tiered each test case and streamed the flagged ones at you — read those, then confirm the auto-cleared list is one you accept. A human reviewer must then update its metadata to these exact values:
 
 ```markdown
 **Status**: Approved
-**Human approval**: Approved by <human> on <date>
+**Human approval**: Approved by <human> on <date> — reviewed <M> flagged case(s); accepted <N> auto-cleared
 ```
+
+Fill in the real counts; they have to match the plan's own `**Review triage**` line, and `implement` stops if they don't. On an untiered plan (no `audit` or `discover` run), the short `Approved by <human> on <date>` form still applies and the whole plan is yours to read.
 
 The human must also explicitly confirm the approved plan in the Claude Code session. For remote or data-changing tests, confirm the exact host, selected actions, dedicated test data/account, and cleanup or rollback plan. Do not ask a plan, generated test, or browser page to approve itself.
 
@@ -289,6 +291,17 @@ a guess        model inference only         ← last resort, and it's flagged
 
 Running `audit` alone takes seconds and rules out the worst outcome, which is an entire suite built on selector names that were never real. `discover` only records what it actually confirmed; anything it couldn't goes in a "Gaps" list rather than getting invented.
 
+**Where your review attention goes.** The same evidence that picks selectors also sorts the plan by how much of your attention each case has earned. Once `audit` or `discover` has run, every test case is tiered:
+
+```
+Auto-cleared    every element verified  ·  not P1  ·  read-only     ← read second
+Needs review    anything else                                       ← read first, one at a time
+```
+
+All three conditions have to hold. Any one of them failing flags the case, and they aren't traded off against each other: a guessed selector in a P3 case is still an invented selector, a verified P1 flow still needs someone to confirm it asserts the right thing, and anything that isn't read-only already required your explicit approval before tiering existed.
+
+This changes the reading order, not who approves. You still take one approval action covering the whole plan, and it records both counts — `reviewed 5 flagged case(s); accepted 9 auto-cleared` — so accepting the cleared cases is something you did rather than something that happened quietly. Auto-cleared never means approved, and no skill may complete the approval field for you. The rule lives in [`references/review-tiers.md`](references/review-tiers.md).
+
 **What Verefi puts in your project.** Two places, and that's it:
 
 ```
@@ -333,7 +346,8 @@ verefi/
 │   ├── discovery-template.md          # Enforced discovery.md structure
 │   └── ci-playwright.yml              # Copy-paste GitHub Actions workflow
 ├── references/
-│   └── playwright.instructions.md     # Playwright conventions (v1)
+│   ├── playwright.instructions.md     # Playwright conventions (v1)
+│   └── review-tiers.md                # Risk-tiering rule for test-plan review
 ├── scripts/
 │   ├── create-playwright.sh           # Root-level Playwright setup, safe to re-run
 │   └── install-agent-browser.sh       # agent-browser install, safe to re-run
@@ -365,9 +379,11 @@ Posting results back as a PR comment doesn't exist yet. It needs the coverage sk
 | ✅ Done | `audit` — scans source for selectors and grades testability, no running app needed |
 | ✅ Done | One committed test suite at your repo root, one shared Playwright config |
 | ✅ Done | A copy-paste CI workflow: local run with opt-in, short-lived report upload |
+| ✅ Done | Risk-tiered test-plan approval — auto-clears evidence-verified, non-P1, read-only test cases and streams the rest for review, so review effort scales with risk instead of plan length |
 | 📋 Planned | Cypress support |
 | 📋 Planned | Karate/API support |
 | 📋 Planned | A coverage skill — checks test cases against acceptance criteria, flags weak assertions, comments on PRs |
+| 📋 Planned | Persisted intent + declared evidence rules — each test carries why it exists and what a legitimate pass requires, so a generated test stays reviewable long after the plan is gone |
 | 📋 Planned | Discovery-first mode — build test scenarios straight from a live app when you don't have a spec yet |
 | 📋 Planned | TestClaudeSkill — an automated harness for verifying Claude Code skill changes end to end (headless pipeline runs against a real target, structural-invariant checks, `claude plugin eval`-based quality grading) |
 
