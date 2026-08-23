@@ -132,3 +132,33 @@ agent decided this part didn't need a human."
   means "read this second," never "this is approved."
 - A reviewer can always override a tier by hand. `Auto-cleared` → `Needs
   review` is a normal edit, and nothing downstream may revert it.
+
+## An approval that predates tiering is stronger, not weaker
+
+A plan can be approved first and tiered afterward — a plan approved before this
+feature existed, or one re-tiered by a later `discover` run. Its approval is
+the short `Approved by <human> on <date>` form with no counts, which the check
+in `implement`'s Step 0 would otherwise stop on.
+
+Accept it, and say why plainly: an approval given *before* any triage existed
+is an approval of the **whole plan at full scrutiny**. The human read every
+case, including the ones a tier would later auto-clear. That is strictly more
+review than the tiered flow asks for, so honoring it takes nothing away. The
+count check exists to catch someone approving an already-tiered plan without
+acknowledging its flagged set — not to invalidate a stronger, earlier review.
+
+Two conditions, both checkable, keep this from becoming a bypass:
+
+1. **The triage must declare itself retroactive**, naming the date tiers were
+   computed, and that date must be *after* the approval date. Order matters:
+   tiers computed before an approval must be acknowledged by it.
+2. **Tier computation must be the only change since the approval.** If test
+   cases, targets, or data-impact notes changed after sign-off, the approval no
+   longer describes the plan in front of you — that invalidates it for reasons
+   that have nothing to do with tiering, and the plan needs re-approval.
+
+Never *create* this state to get past the gate. Writing tiers onto an approved
+plan and labeling them retroactive, so an agent-added triage inherits a human's
+earlier approval, is the self-approval failure wearing a timestamp. Tiering an
+already-approved plan is a thing a human asks for, not a thing a skill does on
+its own initiative.

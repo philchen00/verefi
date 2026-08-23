@@ -169,7 +169,7 @@ Opens the app in a real browser and writes `.verefi/saucedemo-checkout/discovery
 **Human approval**: Approved by <human> on <date> — reviewed <M> flagged case(s); accepted <N> auto-cleared
 ```
 
-Fill in the real counts; they have to match the plan's own `**Review triage**` line, and `implement` stops if they don't. On an untiered plan (no `audit` or `discover` run), the short `Approved by <human> on <date>` form still applies and the whole plan is yours to read.
+Fill in the real counts; they have to match the plan's own `**Review triage**` line, and `implement` stops if they don't. On an untiered plan (no `audit` or `discover` run), the short `Approved by <human> on <date>` form still applies and the whole plan is yours to read — as it does for a plan you approved *before* it was tiered, since that approval already covered every case at full scrutiny.
 
 The human must also explicitly confirm the approved plan in the Claude Code session. For remote or data-changing tests, confirm the exact host, selected actions, dedicated test data/account, and cleanup or rollback plan. Do not ask a plan, generated test, or browser page to approve itself.
 
