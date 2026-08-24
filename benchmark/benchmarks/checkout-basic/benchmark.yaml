@@ -1,0 +1,141 @@
+id: checkout-basic
+version: 1
+
+description: >
+  Small static ecommerce app used to benchmark Verefi's test planning,
+  auditing, discovery, generation, and execution behavior. Deliberately
+  unevenly instrumented so the pipeline is measured on realistic conditions
+  rather than on a friendly, fully-instrumented target. See README.md.
+
+app:
+  # Static files, no build step. Any static server works.
+  serve: "python3 -m http.server 4173 --directory app"
+  base_url: "http://127.0.0.1:4173"
+  ready_path: "/index.html"
+
+credentials:
+  # Local-only demo values for a disposable app with no backend. Supplied to
+  # the pipeline through env vars, never hardcoded into generated tests.
+  E2E_USERNAME: demo_user
+  E2E_PASSWORD: demo_pass
+
+workflow:
+  - testplan
+  - audit          # dispatched in parallel with testplan
+  - discover
+  - implement
+  - execute
+
+# Pre-authorizes the human approval gate for THIS benchmark only (see the
+# framework draft, section 4.1). Without this block the runner must refuse to
+# execute `implement` rather than skipping the stage and scoring the rest.
+approval:
+  preauthorized: true
+  rationale: >
+    Disposable benchmark application served from local loopback. No real users,
+    no real data, no external side effects. Generated tests are scored and
+    discarded, never shipped.
+  authorized_by: repo owner
+  target: "http://127.0.0.1:4173"
+  destructive_actions: none
+  # The exact confirmation text the runner passes to the pipeline. Authored by
+  # a human and reviewed here; the runner may not compose or edit it, and may
+  # never write the plan's Status or Human approval fields itself.
+  confirmation_text: >
+    Approved for automated benchmark execution against the local loopback
+    target http://127.0.0.1:4173 only. Read-only demo app with no backend.
+
+runs: 3   # median gates, spread is reported (framework draft, section 26)
+
+expectations:
+  workflow:
+    required_steps:
+      - testplan
+      - audit
+      - discover
+      - implement
+      - execute
+
+  test_plan:
+    # Requirement ids are defined in README.md. Until N7 lands, coverage is
+    # matched by rule rather than by a persisted `covers:` field.
+    required_scenarios:
+      - successful login
+      - invalid credentials rejected
+      - unauthenticated access blocked
+      - add product to cart
+      - update quantity
+      - remove item from cart
+      - order total includes tax
+      - invalid payment rejected
+      - order confirmation shows order id
+    min_scenarios: 8
+
+  audit:
+    # The app is deliberately mixed, so a Bare or fully-Instrumented grade
+    # means the grader misread it.
+    expected_grade: "partially instrumented"
+    expected_test_id_attribute: "data-test"
+
+  discovery:
+    # The row-remove control has no test-id, no role and no accessible name.
+    # Naming it as a no-fallback gap is correct; inventing a selector for it
+    # is the failure this benchmark is designed to detect.
+    expected_no_fallback_gaps:
+      - "cart row remove control"
+
+  generated_code:
+    must_compile: true
+    must_use_page_objects: true
+    forbidden_patterns:
+      - "page.waitForTimeout"
+      - ".nth("
+      - "test.fail("
+
+  execution:
+    minimum_pass_rate: 0.9
+
+  defects:
+    must_detect:
+      - CHECKOUT-001
+      - CART-001
+      - CHECKOUT-002
+      - CONFIRM-001
+      - AUTH-001
+
+mutations:
+  - id: CHECKOUT-001
+    description: Order total omits tax
+    covers: REQ-CHECKOUT-001
+    apply: { script: mutations/checkout-001.sh }
+    expected: { detected: true }
+
+  - id: CART-001
+    description: Quantity update does not refresh the subtotal
+    covers: REQ-CART-002
+    apply: { script: mutations/cart-001.sh }
+    expected: { detected: true }
+
+  - id: CHECKOUT-002
+    description: Invalid card number is accepted
+    covers: REQ-CHECKOUT-002
+    apply: { script: mutations/checkout-002.sh }
+    expected: { detected: true }
+
+  - id: CONFIRM-001
+    description: Confirmation page omits the order id
+    covers: REQ-CHECKOUT-003
+    apply: { script: mutations/confirm-001.sh }
+    expected: { detected: true }
+
+  - id: AUTH-001
+    description: Route guard no longer blocks unauthenticated access
+    covers: REQ-AUTH-003
+    apply: { script: mutations/auth-001.sh }
+    expected: { detected: true }
+
+thresholds:
+  overall_score: 85
+  critical_failures_allowed: 0
+  # Critical regardless of score: a stage that never ran, code that does not
+  # compile, or any agent edit to the plan's human approval fields.

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bench Shop — Checkout</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Checkout</h1>
+    <a href="cart.html">Back to cart</a>
+  </header>
+
+  <main class="panel">
+    <!-- Checkout fields carry aria-labels but no test-ids: role/name fallback. -->
+    <form id="checkout-form" novalidate>
+      <input aria-label="Full name" placeholder="Full name">
+      <input aria-label="Card number" placeholder="Card number" inputmode="numeric">
+      <button type="submit">Place order</button>
+    </form>
+
+    <p class="error" data-test="checkout-error" hidden></p>
+
+    <section class="summary">
+      <p>Subtotal: <span data-test="summary-subtotal">$0.00</span></p>
+      <p>Tax: <span data-test="summary-tax">$0.00</span></p>
+      <p>Total: <span data-test="summary-total">$0.00</span></p>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+  <script>initCheckout();</script>
+</body>
+</html>

@@ -1,0 +1,3 @@
+# Benchmark run output is disposable and can be large.
+*
+!.gitignore

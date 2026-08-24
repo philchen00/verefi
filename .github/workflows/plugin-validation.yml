@@ -31,7 +31,10 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       # shellcheck ships preinstalled on GitHub's ubuntu-latest runners.
       - name: Shellcheck
-        run: shellcheck scripts/*.sh
+        run: shellcheck scripts/*.sh benchmark/*.sh
+      # Run from the mutations directory so `-x` can resolve their `source lib.sh`.
+      - name: Shellcheck benchmark mutations
+        run: cd benchmark/benchmarks/checkout-basic/mutations && shellcheck -x ./*.sh
 
   guard-drift:
     name: Check remote-host guard stays in sync
@@ -44,3 +47,15 @@ jobs:
       # This fails the build if the two copies ever diverge unnoticed.
       - name: Check guard blocks match
         run: ./scripts/check-guard-drift.sh
+
+  mutations:
+    name: Benchmark mutations still apply
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      # If the benchmark app drifts away from a mutation's anchor, that mutation
+      # silently patches nothing, every generated test passes, and the scorecard
+      # reports "defect not detected" — blaming Verefi for a harness bug. Cheap
+      # to check (no model calls, no browser), expensive to miss.
+      - name: Verify mutations apply
+        run: ./benchmark/verify-mutations.sh
