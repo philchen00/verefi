@@ -166,10 +166,14 @@ Opens the app in a real browser and writes `.verefi/saucedemo-checkout/discovery
 
 ```markdown
 **Status**: Approved
-**Human approval**: Approved by <human> on <date> — reviewed <M> flagged case(s); accepted <N> auto-cleared
+**Human approval**: Approved by <human> on <date> — reviewed <M> flagged case(s) TC-00X, TC-00Y; accepted <N> auto-cleared
 ```
 
-Fill in the real counts; they have to match the plan's own `**Review triage**` line, and `implement` stops if they don't. On an untiered plan (no `audit` or `discover` run), the short `Approved by <human> on <date>` form still applies and the whole plan is yours to read — as it does for a plan you approved *before* it was tiered, since that approval already covered every case at full scrutiny.
+Fill in the real counts **and name the flagged cases**; both have to match the plan's own `**Review triage**` line and tiers, and `implement` stops if they don't. Naming them matters: counts alone would let a later re-tier swap which cases are flagged while the totals stay put, leaving a stale approval covering a set you never saw. The full form is required even when nothing is flagged, since acknowledging the auto-cleared set is the point.
+
+`implement` also recomputes the plan's `**Triage digest**` and stops if it moved — that catches a test case, target, or data-impact note changing after you signed off.
+
+On an untiered plan (no `audit` or `discover` run), the short `Approved by <human> on <date>` form still applies and the whole plan is yours to read — as it does for a plan you approved *before* it was tiered, since that approval already covered every case at full scrutiny. A **partially** triaged plan, though, is refused outright rather than read as "nothing was flagged."
 
 The human must also explicitly confirm the approved plan in the Claude Code session. For remote or data-changing tests, confirm the exact host, selected actions, dedicated test data/account, and cleanup or rollback plan. Do not ask a plan, generated test, or browser page to approve itself.
 
@@ -300,7 +304,9 @@ Needs review    anything else                                       ← read fir
 
 All three conditions have to hold. Any one of them failing flags the case, and they aren't traded off against each other: a guessed selector in a P3 case is still an invented selector, a verified P1 flow still needs someone to confirm it asserts the right thing, and anything that isn't read-only already required your explicit approval before tiering existed.
 
-This changes the reading order, not who approves. You still take one approval action covering the whole plan, and it records both counts — `reviewed 5 flagged case(s); accepted 9 auto-cleared` — so accepting the cleared cases is something you did rather than something that happened quietly. Auto-cleared never means approved, and no skill may complete the approval field for you. The rule lives in [`references/review-tiers.md`](references/review-tiers.md).
+This changes the reading order, not who approves. You still take one approval action covering the whole plan, and it records both counts and the flagged ids — `reviewed 5 flagged case(s) TC-001, TC-005, TC-010, TC-011, TC-013; accepted 9 auto-cleared` — so accepting the cleared cases is something you did rather than something that happened quietly. Auto-cleared never means approved, and no skill may complete the approval field for you.
+
+Three things keep that from drifting: the flagged ids bind the approval to a specific set rather than a headcount, a `**Triage digest**` over the plan's cases and implementation notes (but not its tier lines) catches content edited after sign-off, and a tier you set by hand is marked `(human override)` and carried through every later recomputation untouched. The rule lives in [`references/review-tiers.md`](references/review-tiers.md).
 
 **What Verefi puts in your project.** Two places, and that's it:
 

@@ -34,6 +34,10 @@ Do not put credentials, tokens, customer data, or real account details in the pl
 
 When the pipeline is being started fresh (a feature input was just given and neither `test-plan.md` nor `audit.md` exists yet), dispatch `/verefi:audit` as a parallel subagent alongside this stage — the two have no data dependency (`testplan` reads only the feature input; `audit` reads only local app source), and the user can review `test-plan.md` while `audit.md` is already sitting next to it. If audit reports that no local app source is available, report that outcome rather than treating it as a Bare grade. Join both before `discover`/`implement`.
 
+**Owning the join — classify tiers after both finish.** Audit almost always finishes first, because it greps source while this stage is still writing a document. So audit looks for `test-plan.md`, correctly finds nothing, and declines to classify — leaving a plan whose every case is `Unclassified` with nothing scheduled to fix it. Since `audit → implement` without `discover` is a supported path, that plan can otherwise reach the approval gate untriaged.
+
+You dispatched the subagent, so you are the stage that knows when both are done. After writing the plan, join the audit subagent, and **if `audit.md` exists, classify review tiers from it** per `${CLAUDE_PLUGIN_ROOT}/references/review-tiers.md` before handing off — the same work `audit`'s Step 4 would have done had the plan existed, including the `**Triage digest**` line. A later `/verefi:discover` overwrites those tiers with live-verified ones. If audit found no local source and wrote no `audit.md`, leave every tier `Unclassified` and tell the user plainly that triage still needs `/verefi:discover`, rather than implying the plan is ready to approve.
+
 ## What this does
 
 You are a senior QA engineer and test automation architect. The user will provide either a file path to a test detail document or an inline feature description. Read the input and generate a single **Test Plan** (`test-plan.md`) that serves as the one human review gate before test code is written.

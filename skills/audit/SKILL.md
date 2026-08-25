@@ -94,8 +94,11 @@ Read the template at `${CLAUDE_PLUGIN_ROOT}/templates/audit-template.md` and fil
 
 Audit often runs *before* `test-plan.md` exists (it's dispatched in parallel with `testplan`, and it's also the zero-setup entry point on a repo with no plan at all). So this step is conditional:
 
-- **No `test-plan.md` for this run** → skip entirely. There is nothing to classify. Do not create a plan to have something to tier.
+- **No `test-plan.md` for this run** → do not classify, and **say so explicitly** in your final summary: "No test plan existed when this audit finished, so no review tiers were computed — whoever joins this run must classify before approval." Do not create a plan to have something to tier, and do not let the omission pass silently. When `testplan` dispatched this audit in parallel, that join is `testplan`'s job; this is the common ordering, since a grep finishes faster than a document gets written.
 - **`test-plan.md` exists** → read `${CLAUDE_PLUGIN_ROOT}/references/review-tiers.md` and apply its rule to each test case using this audit's inventory as the evidence source, then edit `test-plan.md` in place: replace each `**Review tier:**` line with the decision and its reason, and update the header's `**Review triage**` counts.
+  - **Carry any tier line containing `(human override)` through verbatim** — a reviewer's hand-set tier is a decision this step may not undo.
+  - **Leave no case `Unclassified`.** A case with no static evidence is `Needs review — no evidence in audit.md`, never left pending; `implement` refuses a partially triaged plan.
+  - Record the plan digest so later stages can distinguish tier edits from content edits: run `"${CLAUDE_PLUGIN_ROOT}/scripts/plan-digest.sh" .verefi/<name>/test-plan.md` and write it as `**Triage digest**: <value>`.
 
 Cite the evidence honestly as **static**, not live: `Auto-cleared — selectors found in source (audit.md §1), P2, read-only`. That wording matters downstream — a reviewer reading a plan tiered only from audit needs to know nothing has actually been rendered in a browser yet, and a later `/verefi:discover` run will overwrite these tiers with live-verified ones.
 

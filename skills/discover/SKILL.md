@@ -170,8 +170,16 @@ Discovery is the first moment in the pipeline where real, live evidence exists f
 
 1. For each test case in `test-plan.md`, decide `Auto-cleared` or `Needs review` using that file's rule (evidence-verified **and** not P1 **and** read-only → auto-cleared; any one of those failing → needs review).
 2. Edit `test-plan.md` in place, replacing each case's `**Review tier:**` line with the decision **and its reason**, citing the evidence (e.g. `Auto-cleared — all selectors live-verified (discovery.md §1), P2, read-only`).
-3. Update the header's `**Review triage**` line with the counts and the artifact they came from.
-4. Overwrite any tier a previous `/verefi:audit` run wrote. Live verification outranks static evidence — that's the same trust hierarchy `implement` uses for selectors, applied to tiers.
+3. **Carry any tier line containing `(human override)` through verbatim.** A reviewer who hand-set a tier has made a decision this step may not undo. If your computation disagrees, say so in your summary — do not rewrite the line.
+4. **Leave no case `Unclassified`.** Every test case must end this step with a terminal tier, or `implement` will refuse the plan as partially triaged. If a case genuinely has no evidence, that is `Needs review — no evidence`, not `Unclassified`.
+5. Update the header's `**Review triage**` line with the counts and the artifact they came from, and record the plan digest so a later stage can tell tier edits from content edits:
+
+   ```bash
+   "${CLAUDE_PLUGIN_ROOT}/scripts/plan-digest.sh" .verefi/<name>/test-plan.md
+   ```
+
+   Write it as `**Triage digest**: <value>`. The digest deliberately ignores tier lines, so writing it after re-tiering is correct and stable.
+6. Overwrite any tier a previous `/verefi:audit` run wrote — except human overrides, per step 3. Live verification outranks static evidence: the same trust hierarchy `implement` uses for selectors, applied to tiers.
 
 Then present the flagged subset for review, per that reference's "Presenting the flagged subset": stream the `Needs review` cases one at a time with what to check on each, and summarize the auto-cleared set in one line the human has to accept.
 

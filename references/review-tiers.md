@@ -31,8 +31,8 @@ recompute (overwrite) whenever stronger evidence arrives:
 
 | Stage | What it does |
 |---|---|
-| `testplan` | Writes `**Review tier:** Unclassified — pending evidence` for every case. Never guesses a tier. |
-| `audit` | If `test-plan.md` already exists for this run, classify from `audit.md`'s static evidence and write the tiers back. |
+| `testplan` | Writes `**Review tier:** Unclassified — pending evidence` for every case. Never guesses a tier. **Owns the join** (see below). |
+| `audit` | If `test-plan.md` already exists for this run, classify from `audit.md`'s static evidence and write the tiers back. If it does not exist yet, say so — classification is then the join's job, not skipped. |
 | `discover` | Always classify and write the tiers back, overwriting any `audit`-derived tier — live verification outranks static evidence. |
 | `implement` | Never computes or edits tiers. Reads them only to check the approval gate (see below). |
 
@@ -40,6 +40,26 @@ Recomputing on stronger evidence is expected: a case `audit` could only tier
 from a static grep may become `Auto-cleared` once `discover` confirms the
 selector resolves live. Always state which artifact a classification came
 from, so a reviewer can tell live-verified from statically-inferred.
+
+### The parallel-dispatch race, and who closes it
+
+`testplan` and `audit` run **in parallel** — and `audit` usually finishes
+first, because it greps source while `testplan` is still writing a document.
+So the common ordering is: `audit` looks for `test-plan.md`, finds nothing,
+correctly declines to classify… and then `testplan` writes a plan that stays
+`Unclassified` with nothing scheduled to fix it. Since `audit → implement`
+without `discover` is a supported path, that plan can reach the approval gate
+untriaged.
+
+**`testplan` closes this at the join.** It dispatched `audit`, so it is the
+stage that knows when both have finished. After writing the plan, it joins the
+audit subagent and — if `audit.md` exists — classifies from it before handing
+off. `discover` later overwrites those tiers with live-verified ones.
+
+Two backstops, because a race should not depend on one stage remembering:
+`audit` states explicitly when it skipped classification because no plan
+existed yet, and `implement` refuses a partially-triaged plan outright rather
+than reading "nothing flagged" from tiers that were never computed.
 
 ## The rule
 
@@ -124,14 +144,47 @@ agent decided this part didn't need a human."
 - The human still takes **one explicit approval action covering the whole
   plan**, auto-cleared cases included.
 - That action acknowledges the auto-cleared set explicitly, by recording the
-  counts in the approval field (see `test-plan-template.md`) — so accepting
-  them is a thing the reviewer did, not a thing that happened while they
-  weren't looking.
+  counts **and the flagged case ids** in the approval field (see
+  `test-plan-template.md`) — so accepting them is a thing the reviewer did, not
+  a thing that happened while they weren't looking.
+
+  Ids, not just counts. Counts alone bind an approval to *how many* cases were
+  flagged, which a later re-tier can preserve while swapping *which* ones: move
+  TC-004 into `Needs review` and TC-011 out of it, totals unchanged, and a
+  stale approval still reads as valid over a set the human never saw. The ids
+  make the approval describe a specific set.
 - No skill may write `Approved`, complete the `**Human approval**` field, or
   treat a tier as standing in for any part of that approval. `Auto-cleared`
   means "read this second," never "this is approved."
-- A reviewer can always override a tier by hand. `Auto-cleared` → `Needs
-  review` is a normal edit, and nothing downstream may revert it.
+- A reviewer can always override a tier by hand, and nothing downstream may
+  revert it. Because `audit` and `discover` *recompute* tiers, an override
+  needs a marker they can see — otherwise the next run silently erases it:
+
+  ```markdown
+  **Review tier:** Needs review (human override) — I want to read this one regardless
+  ```
+
+  **Any tier line containing `(human override)` is carried through
+  recomputation verbatim.** A skill may report that its own computation
+  disagrees; it may not replace the line. Removing an override is a human
+  edit, exactly like adding one.
+
+## Every case must reach a terminal tier
+
+A tier is `Auto-cleared` or `Needs review`. `Unclassified — pending evidence`
+is the *pre-triage* state written by `testplan`, not an outcome.
+
+Once any case in a plan carries a tier field, **every** case must carry exactly
+one terminal tier before that plan can be approved through the tiered flow. A
+plan where some cases are classified and others are still `Unclassified`, or
+missing a tier line entirely, is **partially triaged** — a state that must
+never be treated as "nothing was flagged."
+
+This closes a specific hole. The count check is not "stop when something is
+flagged"; a plan with zero flagged cases, or one whose flagged cases were never
+computed, still requires the full acknowledgement. Otherwise the easiest way
+past the gate is a plan the triage never finished — and the more broken the
+triage, the more easily it passes.
 
 ## An approval that predates tiering is stronger, not weaker
 
@@ -152,10 +205,27 @@ Two conditions, both checkable, keep this from becoming a bypass:
 1. **The triage must declare itself retroactive**, naming the date tiers were
    computed, and that date must be *after* the approval date. Order matters:
    tiers computed before an approval must be acknowledged by it.
-2. **Tier computation must be the only change since the approval.** If test
-   cases, targets, or data-impact notes changed after sign-off, the approval no
-   longer describes the plan in front of you — that invalidates it for reasons
-   that have nothing to do with tiering, and the plan needs re-approval.
+2. **Tier computation must be the only change since the approval** — and this
+   has to be *verified*, not asserted. A plan carries a `**Triage digest**`
+   line written when tiers were computed:
+
+   ```bash
+   scripts/plan-digest.sh .verefi/<name>/test-plan.md
+   ```
+
+   The digest covers Section 1 and Section 2 — every test case with its
+   priority and data impact, plus the target, base URL, credentials and
+   destructive-action notes — and deliberately **excludes `**Review tier:**`
+   lines**. So re-tiering leaves it unchanged while editing a case, a target,
+   or a data-impact note changes it. Recompute and compare: a mismatch means
+   something other than tiering changed, and the plan needs re-approval.
+
+   **What the digest is and isn't.** It detects content drift. It is not a
+   signature and does not bind a plan to a particular human — an agent that
+   edits a plan can also recompute the digest. It earns its place as one layer
+   among three: no skill may write the approval fields, INV-A01 proves across
+   each stage that none did, and the digest catches content that moved
+   underneath an approval regardless of who moved it.
 
 Never *create* this state to get past the gate. Writing tiers onto an approved
 plan and labeling them retroactive, so an agent-added triage inherits a human's

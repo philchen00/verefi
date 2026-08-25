@@ -4,6 +4,7 @@
 **Created**: 2026-08-21
 **Status**: Approved
 **Review triage**: 9 auto-cleared, 5 flagged (from discovery.md on 2026-08-21) — see each test case's Review tier. **Applied retroactively on 2026-08-23**, after this plan was approved, to illustrate the tier format on a real plan; the approval below predates tiering and therefore covers all 14 cases at full scrutiny.
+**Triage digest**: 5c60d32c7c6351cf
 **Human approval**: Approved by Phil Chen on 2026-08-21
 **Input**: "Users can log in, browse and sort products, and check out https://www.saucedemo.com"
 

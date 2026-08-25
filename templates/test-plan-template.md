@@ -15,7 +15,8 @@ Formatting rules (apply when filling this template):
 **Created**: [DATE]
 **Status**: Draft
 **Review triage**: Pending — no evidence artifact yet; replaced with `<N> auto-cleared, <M> flagged (from <discovery.md|audit.md> on <date>)` once `/verefi:discover` or `/verefi:audit` has run
-**Human approval**: Pending — replace with `Approved by <human> on <date> — reviewed <M> flagged case(s); accepted <N> auto-cleared` only after a human has reviewed every flagged test case, the target, and every data-impact note. Auto-cleared cases are read second, not skipped: recording the counts is how the reviewer accepts them.
+**Triage digest**: Pending — set by audit/discover to the output of `scripts/plan-digest.sh` on this plan; covers the test cases and implementation notes but not the tier lines, so re-tiering leaves it unchanged and a content edit does not
+**Human approval**: Pending — replace with `Approved by <human> on <date> — reviewed <M> flagged case(s) TC-00X, TC-00Y; accepted <N> auto-cleared` only after a human has reviewed every flagged test case, the target, and every data-impact note. Name the flagged ids, not just the count: a later re-tier can keep the totals while swapping which cases are flagged. Auto-cleared cases are read second, not skipped — recording the counts is how the reviewer accepts them, and the full form is required even when nothing is flagged.
 **Input**: "[original feature description or source file path]"
 
 ## Section 1 — Test Cases
