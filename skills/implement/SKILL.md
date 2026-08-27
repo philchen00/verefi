@@ -58,7 +58,9 @@ Work through these in order — the first matching case decides:
 
 2. **Some cases carry tiers, but any case is `Unclassified` or has no tier line** → **stop. The plan is partially triaged.** Do not read this as "nothing was flagged." Report which cases are unclassified and tell the user to re-run `/verefi:discover` (or `/verefi:audit`) to finish triage, then re-approve. This is the state the `testplan`/`audit` parallel dispatch produces when audit finishes before the plan exists — see the reference's "The parallel-dispatch race." Treating it as clean would mean the more broken the triage, the more easily a plan passes.
 
-3. **Every case carries a terminal tier** (`Auto-cleared` or `Needs review`) → the approval must be the full form, **whether or not anything is flagged**:
+3. **Every case is terminally tiered and the `**Review triage**` line declares itself retroactive with a computation date *after* the approval date** → accept the short-form approval. An approval given before any triage existed covers the whole plan at full scrutiny, which is strictly more review than the tiered flow asks for. Verify the date order rather than taking the word "retroactive" at face value, and still verify the digest — that is what makes "only the tiers changed" a checked fact rather than a claim. See the reference's "An approval that predates tiering is stronger, not weaker," including why you must never *create* this state yourself. Check this **before** rule 4 below — every retroactively tiered plan also matches "every case carries a terminal tier," so checking that generic rule first would make this exception unreachable.
+
+4. **Every case carries a terminal tier** (`Auto-cleared` or `Needs review`), and rule 3 above didn't match → the approval must be the full form, **whether or not anything is flagged**:
 
    ```
    Approved by <human> on <date> — reviewed <M> flagged case(s) TC-00X, TC-00Y; accepted <N> auto-cleared
@@ -75,8 +77,6 @@ Work through these in order — the first matching case decides:
      ```
 
      A mismatch means a test case, target, or data-impact note changed after triage. Re-approval is needed, for reasons that have nothing to do with tiering.
-
-4. **Every case is terminally tiered and the `**Review triage**` line declares itself retroactive with a computation date *after* the approval date** → accept the short-form approval. An approval given before any triage existed covers the whole plan at full scrutiny, which is strictly more review than the tiered flow asks for. Verify the date order rather than taking the word "retroactive" at face value, and still verify the digest — that is what makes "only the tiers changed" a checked fact rather than a claim. See the reference's "An approval that predates tiering is stronger, not weaker," including why you must never *create* this state yourself.
 
 **Never compute, edit, or "fix" a tier here**, and never recompute a digest into the plan to make it match. Tiers are `audit`/`discover`'s output. If triage is incomplete, the answer is to run triage — not to invent one at implement time to satisfy this check.
 
