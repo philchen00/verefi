@@ -49,7 +49,21 @@ Use only `E2E_*` environment variables or the user's secret manager for dedicate
    - **`[KNOWN BUG]` failures** — the test title carries this marker (see `references/playwright.instructions.md` and `skills/implement/SKILL.md` Step 1c). These are *expected* to fail: they assert correct behavior against a confirmed, still-unfixed app defect. Do not treat these as suite breakage and do not "fix" them by loosening the assertion — that's the exact anti-pattern this marker exists to prevent. Report them separately from real failures (e.g. "17 passed, 2 known-bug failures (expected), 0 unexpected failures"), not folded into a single failure count that reads as regression. If the app's source is available in this repo, this is the moment to actually go look at fixing it — locate the responsible code path and propose a fix, or say explicitly that you looked and couldn't/it needs product input; don't just restate that the test is red and stop there.
    - **Selector-shaped failures** (timeout waiting for a locator) — the element likely doesn't exist as addressed; re-check `discovery.md`/`audit.md` or re-run `/verefi:discover`.
    - **Behavior-shaped failures with no `[KNOWN BUG]` marker** (assertion mismatch on a found element) — this is new signal: either the app regressed, or the test plan's expectation was wrong. Investigate before assuming either; if it turns out to be a real, reproducible app defect, that's exactly the case Step 1c covers — flag it to the user rather than quietly patching the assertion to match, even though the marker wasn't there yet at generation time.
-6. If everything not marked `[KNOWN BUG]` passes: confirm this plainly (e.g. "17/17 real tests passing, 2 known-bug failures as expected") and suggest reviewing `.verefi/<name>/test-plan.md` acceptance criteria checkboxes — and committing the spec file if it isn't committed yet. Don't report a run with outstanding `[KNOWN BUG]` failures as simply "all pass" — say what's actually true.
+6. If everything not marked `[KNOWN BUG]` passes: confirm this plainly (e.g. "17/17 real tests passing, 2 known-bug failures as expected") and suggest committing the spec file if it isn't committed yet. Don't report a run with outstanding `[KNOWN BUG]` failures as simply "all pass" — say what's actually true.
+7. Update `.verefi/<name>/test-plan.md`'s Acceptance Criteria checkboxes to reflect this run's actual result — see "Acceptance criteria checkboxes" below.
+
+## Acceptance criteria checkboxes
+
+Do this automatically, without asking for confirmation first, then report the diff. A checkbox here is not a protected field — `Status`, `Human approval`, and `Review tier` remain off-limits to every skill including this one, but an Acceptance Criteria checkbox is plain transcription of a fact this run just produced, no different from the pass/fail counts in Step 4. Asking permission to record an objective result adds friction without a real decision behind it.
+
+For each test case whose Playwright test ran in this pass, find its `### TC-###` heading in `test-plan.md` and update the boxes under its **Acceptance Criteria** list:
+
+- **Passed, no `[KNOWN BUG]` marker** → check every box: `- [x] <criterion text>`.
+- **Failed with a `[KNOWN BUG]` marker** → check the box(es) describing the expected-but-currently-broken behavior, but never leave a bare `[x]` — annotate it so a skim never misreads a known-bug box as a real pass: `- [x] <criterion text> (confirmed FAILING as designed — see discovery.md, <date>)`.
+- **Failed with no `[KNOWN BUG]` marker** (Step 5's third bucket — real, unexpected failure) → leave the box unchecked, and add a one-line note directly under the Acceptance Criteria list: `_Unexpected failure on <date> — see Step 5 investigation before treating this as met._` A reader should never have to wonder why a box is still empty.
+- **Not run this pass** (a `--tc`-scoped or otherwise partial run) → leave as-is. Don't imply a result this run didn't produce.
+
+Report exactly which TC-### boxes flipped to checked, which known-bug boxes got the annotation, and which stayed unchecked and why — don't silently edit the file and mention only the aggregate pass/fail counts. Nothing here is a gate: the human can hand-edit or revert any box afterward, same as any other line in the plan.
 
 ## Headed mode
 
