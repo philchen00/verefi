@@ -39,6 +39,10 @@ Feature description (PRD, user story)     Your app's source code
                                     │
                                     ▼
   ⑤ EXECUTE ──► pass/fail per test case · flags selectors that moved
+                                    │
+                                    ▼
+                    checks off test-plan.md's acceptance
+                    criteria against what actually ran
 ```
 
 PRD means product requirements doc. If you don't have one, a paragraph describing the feature is enough to start.
@@ -307,6 +311,10 @@ All three conditions have to hold. Any one of them failing flags the case, and t
 This changes the reading order, not who approves. You still take one approval action covering the whole plan, and it records both counts and the flagged ids — `reviewed 5 flagged case(s) TC-001, TC-005, TC-010, TC-011, TC-013; accepted 9 auto-cleared` — so accepting the cleared cases is something you did rather than something that happened quietly. Auto-cleared never means approved, and no skill may complete the approval field for you.
 
 Three things keep that from drifting: the flagged ids bind the approval to a specific set rather than a headcount, a `**Triage digest**` over the plan's cases and implementation notes (but not its tier lines) catches content edited after sign-off, and a tier you set by hand is marked `(human override)` and carried through every later recomputation untouched. The rule lives in [`references/review-tiers.md`](references/review-tiers.md).
+
+**What ran actually gets written down.** `execute` writes back into the same plan: after a run, each test case's Acceptance Criteria checkboxes get checked against what actually happened, not what was expected. A plain pass gets a plain `[x]`. A `[KNOWN BUG]` failure — a test that correctly asserts what *should* happen against a defect that doesn't — gets checked too, but annotated (`confirmed FAILING as designed`) so it never reads as a real pass on a skim. A genuine, unmarked failure stays unchecked with a note, since that's neither known-good nor known-bad yet — someone still has to look, and the next `execute` run is what resolves it one way or the other.
+
+This isn't a gate the way `Status` and `Human approval` are — nobody signs off on a checkbox, and you can hand-edit one any time. It closes a loop the pipeline was otherwise missing: a plan looked exactly as unverified after a clean run as it did the day it was written.
 
 **What Verefi puts in your project.** Two places, and that's it:
 
