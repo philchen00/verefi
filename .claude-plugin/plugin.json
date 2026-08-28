@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "verefi",
   "displayName": "Verefi",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "AI-assisted pipeline that turns product specs into human-reviewed test plans and executable Playwright automation.",
   "author": {
     "name": "Phil Chen"

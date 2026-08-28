@@ -3,6 +3,8 @@
 **Run**: `saucedemo-checkout`
 **Created**: 2026-08-21
 **Status**: Approved
+**Review triage**: 9 auto-cleared, 5 flagged (from discovery.md on 2026-08-21) — see each test case's Review tier. **Applied retroactively on 2026-08-23**, after this plan was approved, to illustrate the tier format on a real plan; the approval below predates tiering and therefore covers all 14 cases at full scrutiny.
+**Triage digest**: 5c60d32c7c6351cf
 **Human approval**: Approved by Phil Chen on 2026-08-21
 **Input**: "Users can log in, browse and sort products, and check out https://www.saucedemo.com"
 
@@ -13,6 +15,7 @@
 **Type:** Happy Path
 **Priority:** P1 — login is the entry point for every other flow in this plan
 **Data impact:** Read-only — no account state is mutated by logging in
+**Review tier:** Needs review — P1. Selectors are live-verified (discovery.md §1), but the plan itself calls this the entry point for every other flow, so a human confirms the assertions are the right ones.
 
 **Given:** The user is on the Saucedemo login page and has a valid standard test account
 **When:** The user enters a valid username and password and submits the login form
@@ -28,6 +31,7 @@
 **Type:** Negative
 **Priority:** P2 — verifies account-lockout messaging works, a common support-ticket source
 **Data impact:** Read-only
+**Review tier:** Auto-cleared — selectors and the exact error text live-verified (discovery.md §1), P2, read-only
 
 **Given:** The user is on the login page and has credentials for an account known to be locked out
 **When:** The user enters the locked-out username and correct password and submits
@@ -42,6 +46,7 @@
 **Type:** Negative
 **Priority:** P2 — core negative-auth guardrail
 **Data impact:** Read-only
+**Review tier:** Auto-cleared — selectors and the exact error text live-verified (discovery.md §1), P2, read-only
 
 **Given:** The user is on the login page
 **When:** The user enters a username/password combination that does not match any account
@@ -56,6 +61,7 @@
 **Type:** Negative
 **Priority:** P3 — basic client-side validation check
 **Data impact:** Read-only
+**Review tier:** Auto-cleared — both blank-field error texts live-verified (discovery.md §1), P3, read-only
 
 **Given:** The user is on the login page
 **When:** The user submits the login form with the username field, the password field, or both left blank
@@ -70,6 +76,7 @@
 **Type:** Happy Path
 **Priority:** P1 — core browse flow
 **Data impact:** Read-only
+**Review tier:** Needs review — P1. Selectors live-verified, but discovery.md §1 notes product name/price share one `data-test` value across all 6 cards, so the per-card scoping strategy is worth a human look.
 
 **Given:** The user is logged in with a valid standard account
 **When:** The products page loads
@@ -84,6 +91,7 @@
 **Type:** Happy Path
 **Priority:** P2 — validates the sort control, part of the requested "sort products" flow
 **Data impact:** Read-only
+**Review tier:** Auto-cleared — sort dropdown and its `az` option value live-verified (discovery.md §1), P2, read-only
 
 **Given:** The user is on the products page with the default sort applied
 **When:** The user selects the "Name (A to Z)" sort option
@@ -97,6 +105,7 @@
 **Type:** Happy Path
 **Priority:** P2
 **Data impact:** Read-only
+**Review tier:** Auto-cleared — sort dropdown and its `za` option value live-verified (discovery.md §1), P2, read-only
 
 **Given:** The user is on the products page
 **When:** The user selects the "Name (Z to A)" sort option
@@ -110,6 +119,7 @@
 **Type:** Happy Path
 **Priority:** P2
 **Data impact:** Read-only
+**Review tier:** Auto-cleared — sort dropdown and its `lohi` option value live-verified (discovery.md §1), P2, read-only
 
 **Given:** The user is on the products page
 **When:** The user selects the "Price (low to high)" sort option
@@ -123,6 +133,7 @@
 **Type:** Happy Path
 **Priority:** P2
 **Data impact:** Read-only
+**Review tier:** Auto-cleared — sort dropdown and its `hilo` option value live-verified (discovery.md §1), P2, read-only
 
 **Given:** The user is on the products page
 **When:** The user selects the "Price (high to low)" sort option
@@ -136,6 +147,7 @@
 **Type:** Happy Path
 **Priority:** P1 — prerequisite for checkout
 **Data impact:** Creates isolated test data — adds an item to the in-session cart (client-side/session-scoped on this demo site, not a real backend order); cleanup is implicit on session/browser-context teardown, no explicit rollback action exists on the site
+**Review tier:** Needs review — P1 **and** creates test data. Either alone would flag it. Also worth the reviewer's attention: discovery.md §3 records that the cart badge is absent from the DOM (not merely hidden) when empty.
 
 **Given:** The user is logged in and viewing the product list
 **When:** The user clicks "Add to cart" on one product
@@ -150,6 +162,7 @@
 **Type:** Happy Path
 **Priority:** P1 — the primary purchase flow named in the request
 **Data impact:** Creates isolated test data — this demo site simulates checkout entirely client-side; no real payment is processed and no server-side order record persists beyond the session, so no cleanup/rollback action is required
+**Review tier:** Needs review — P1 **and** creates test data. The full purchase path against an approved remote host is exactly the case a human should read even though every selector in it is live-verified.
 
 **Given:** The user is logged in and has added one product to the cart
 **When:** The user opens the cart, proceeds to checkout, enters shipping information (first name, last name, postal code) using fictional test values, continues through the order overview, and finishes the order
@@ -164,6 +177,7 @@
 **Type:** Negative
 **Priority:** P2 — checkout form validation guardrail
 **Data impact:** Read-only — form is never successfully submitted
+**Review tier:** Auto-cleared — checkout-step-one fields and error banner live-verified (discovery.md §1), P2, read-only
 
 **Given:** The user is logged in, has an item in the cart, and is on the checkout information step
 **When:** The user leaves one or more of first name, last name, or postal code blank and clicks continue
@@ -178,6 +192,7 @@
 **Type:** Edge Case
 **Priority:** P3 — validates cart mutation outside the main happy path
 **Data impact:** Creates isolated test data — adds then removes an item within the same session; no persistent state remains after removal
+**Review tier:** Needs review — creates isolated test data. P3 and fully live-verified, so evidence and priority would both have cleared it; the data-impact condition is what flags it, keeping the template's "explicit human approval for anything other than read-only" rule intact.
 
 **Given:** The user is logged in and has added a product to the cart
 **When:** The user opens the cart and removes the item
@@ -192,6 +207,7 @@
 **Type:** Edge Case
 **Priority:** P3 — session-boundary check, not explicitly requested but low-cost coverage of the login/logout pair
 **Data impact:** Read-only
+**Review tier:** Auto-cleared — P3, read-only, and every element live-verified including the burger-menu button, whose role/name fallback (`getByRole('button', { name: 'Open Menu' })`) was confirmed live to resolve to exactly one element (discovery.md §1–2). A confirmed fallback counts as verified — lower-confidence than a test-id, not unverified.
 
 **Given:** The user is logged in and on the products page
 **When:** The user opens the side menu and selects logout

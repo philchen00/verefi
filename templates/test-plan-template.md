@@ -5,6 +5,7 @@ Formatting rules (apply when filling this template):
 - If a value is genuinely unknown, write `TODO(<FIELD_NAME>): <what's needed to resolve it>` rather than guessing.
 - Do not leave literal [bracketed] placeholders in the final output — replace every one.
 - Do not change the approval fields to an approved value. A human reviewer must do that after reviewing this plan.
+- `Review tier` is `Unclassified — pending evidence` at plan-writing time and is filled in later by `audit`/`discover` per `references/review-tiers.md`. Never guess a tier, and never write `Auto-cleared` without an evidence artifact to cite.
 - Never include credential values, tokens, customer data, or real account details. Refer only to dedicated test accounts and environment-variable names.
 -->
 
@@ -13,7 +14,9 @@ Formatting rules (apply when filling this template):
 **Run**: `[run-name]`
 **Created**: [DATE]
 **Status**: Draft
-**Human approval**: Pending — replace with `Approved by <human> on <date>` only after a human has reviewed every test case, target, and data-impact note
+**Review triage**: Pending — no evidence artifact yet; replaced with `<N> auto-cleared, <M> flagged (from <discovery.md|audit.md> on <date>)` once `/verefi:discover` or `/verefi:audit` has run
+**Triage digest**: Pending — set by audit/discover to the output of `scripts/plan-digest.sh` on this plan; covers the test cases and implementation notes but not the tier lines, so re-tiering leaves it unchanged and a content edit does not
+**Human approval**: Pending — replace with `Approved by <human> on <date> — reviewed <M> flagged case(s) TC-00X, TC-00Y; accepted <N> auto-cleared` only after a human has reviewed every flagged test case, the target, and every data-impact note. Name the flagged ids, not just the count: a later re-tier can keep the totals while swapping which cases are flagged. Auto-cleared cases are read second, not skipped — recording the counts is how the reviewer accepts them, and the full form is required even when nothing is flagged.
 **Input**: "[original feature description or source file path]"
 
 ## Section 1 — Test Cases
@@ -25,6 +28,8 @@ Formatting rules (apply when filling this template):
 **Type:** Happy Path | Edge Case | Negative
 **Priority:** P1 | P2 | P3 — [why this priority: e.g. "blocks the core purchase flow"]
 **Data impact:** Read-only | Creates isolated test data | Changes/deletes isolated test data — [name the data/account and cleanup or rollback; require explicit human approval for anything other than read-only]
+**Review tier:** Unclassified — pending evidence <!-- Filled in by audit/discover: `Auto-cleared — <why>` or `Needs review — <why>`. Auto-cleared requires evidence-verified AND not P1 AND read-only; see references/review-tiers.md. -->
+
 
 **Given:** [precondition state of the system]
 **When:** [the user action(s) performed]

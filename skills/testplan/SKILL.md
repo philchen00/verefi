@@ -34,6 +34,10 @@ Do not put credentials, tokens, customer data, or real account details in the pl
 
 When the pipeline is being started fresh (a feature input was just given and neither `test-plan.md` nor `audit.md` exists yet), dispatch `/verefi:audit` as a parallel subagent alongside this stage — the two have no data dependency (`testplan` reads only the feature input; `audit` reads only local app source), and the user can review `test-plan.md` while `audit.md` is already sitting next to it. If audit reports that no local app source is available, report that outcome rather than treating it as a Bare grade. Join both before `discover`/`implement`.
 
+**Owning the join — classify tiers after both finish.** Audit almost always finishes first, because it greps source while this stage is still writing a document. So audit looks for `test-plan.md`, correctly finds nothing, and declines to classify — leaving a plan whose every case is `Unclassified` with nothing scheduled to fix it. Since `audit → implement` without `discover` is a supported path, that plan can otherwise reach the approval gate untriaged.
+
+You dispatched the subagent, so you are the stage that knows when both are done. After writing the plan, join the audit subagent, and **if `audit.md` exists, classify review tiers from it** per `${CLAUDE_PLUGIN_ROOT}/references/review-tiers.md` before handing off — the same work `audit`'s Step 4 would have done had the plan existed, including the `**Triage digest**` line. A later `/verefi:discover` overwrites those tiers with live-verified ones. If audit found no local source and wrote no `audit.md`, leave every tier `Unclassified` and tell the user plainly that triage still needs `/verefi:discover`, rather than implying the plan is ready to approve.
+
 ## What this does
 
 You are a senior QA engineer and test automation architect. The user will provide either a file path to a test detail document or an inline feature description. Read the input and generate a single **Test Plan** (`test-plan.md`) that serves as the one human review gate before test code is written.
@@ -49,6 +53,12 @@ The template has four sections:
 4. **Out of Scope** — what this test plan explicitly does NOT cover
 
 Keep the plan at `**Status**: Draft` and `**Human approval**: Pending`. Never promote either field yourself. A human must review the cases, target, test data, and data-impact notes, resolve all `TODO(...)` entries and Open Questions, then explicitly change the fields to the approved values described in the template. `/verefi:implement` must refuse to write test code until that review gate is complete.
+
+## Review tiers — write them unclassified, never guess one
+
+Every test case gets a `**Review tier:**` field, and at this stage every one of them is `Unclassified — pending evidence`. Leave `**Review triage**` in the header at `Pending` too.
+
+This isn't a formality to fill in later if convenient — a tier is a claim about evidence, and `testplan` has none. It never looks at the app or its source: its selectors are educated guesses by construction, which is exactly the condition that makes a case `Needs review`. Writing `Auto-cleared` here would mean auto-clearing a case *because nothing had checked it yet*, inverting the rule. `/verefi:audit` and `/verefi:discover` fill these in once real evidence exists — see `${CLAUDE_PLUGIN_ROOT}/references/review-tiers.md` for the rule and who computes it when.
 
 ## Artifact safety check — before the first write
 
@@ -66,5 +76,6 @@ Confirm the path after writing. Remind the user to:
 1. Review the Test Cases section in `test-plan.md`
 2. Review `audit.md` next to it (from the parallel `/verefi:audit` run) for the app's testability grade
 3. Optionally run `/verefi:discover` to verify selectors against the running app and generate `discovery.md`
-4. Explicitly approve the plan by completing its human-approval fields after resolving TODOs/Open Questions
-5. Run `/verefi:implement` only after that human approval
+4. Expect `audit`/`discover` to classify each case's review tier, so the approval step focuses on the flagged cases rather than the whole document
+5. Explicitly approve the plan by completing its human-approval fields after resolving TODOs/Open Questions
+6. Run `/verefi:implement` only after that human approval

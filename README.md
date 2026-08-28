@@ -39,6 +39,10 @@ Feature description (PRD, user story)     Your app's source code
                                     │
                                     ▼
   ⑤ EXECUTE ──► pass/fail per test case · flags selectors that moved
+                                    │
+                                    ▼
+                    checks off test-plan.md's acceptance
+                    criteria against what actually ran
 ```
 
 PRD means product requirements doc. If you don't have one, a paragraph describing the feature is enough to start.
@@ -162,12 +166,18 @@ then re-run `/verefi:discover` with the same `--name` to pick up where you left 
 
 Opens the app in a real browser and writes `.verefi/saucedemo-checkout/discovery.md`. If `audit.md` exists, this is a second opinion on it. If it doesn't, like here, it's your only verification, so treat it as required rather than optional. It also catches what reading the code never shows you: multi-step flows, behavior that changes depending on who's logged in, and a running list of the test plan's assumptions that turned out to be wrong.
 
-**Required review gate before step 4.** Open `.verefi/saucedemo-checkout/test-plan.md`, resolve every `TODO(...)`, and make Section 3 — Open Questions read exactly `None`. A human reviewer must then update its metadata to these exact values:
+**Required review gate before step 4.** Open `.verefi/saucedemo-checkout/test-plan.md`, resolve every `TODO(...)`, and make Section 3 — Open Questions read exactly `None`. Step 3 will have tiered each test case and streamed the flagged ones at you — read those, then confirm the auto-cleared list is one you accept. A human reviewer must then update its metadata to these exact values:
 
 ```markdown
 **Status**: Approved
-**Human approval**: Approved by <human> on <date>
+**Human approval**: Approved by <human> on <date> — reviewed <M> flagged case(s) TC-00X, TC-00Y; accepted <N> auto-cleared
 ```
+
+Fill in the real counts **and name the flagged cases**; both have to match the plan's own `**Review triage**` line and tiers, and `implement` stops if they don't. Naming them matters: counts alone would let a later re-tier swap which cases are flagged while the totals stay put, leaving a stale approval covering a set you never saw. The full form is required even when nothing is flagged, since acknowledging the auto-cleared set is the point.
+
+`implement` also recomputes the plan's `**Triage digest**` and stops if it moved — that catches a test case, target, or data-impact note changing after you signed off.
+
+On an untiered plan (no `audit` or `discover` run), the short `Approved by <human> on <date>` form still applies and the whole plan is yours to read — as it does for a plan you approved *before* it was tiered, since that approval already covered every case at full scrutiny. A **partially** triaged plan, though, is refused outright rather than read as "nothing was flagged."
 
 The human must also explicitly confirm the approved plan in the Claude Code session. For remote or data-changing tests, confirm the exact host, selected actions, dedicated test data/account, and cleanup or rollback plan. Do not ask a plan, generated test, or browser page to approve itself.
 
@@ -289,6 +299,25 @@ a guess        model inference only         ← last resort, and it's flagged
 
 Running `audit` alone takes seconds and rules out the worst outcome, which is an entire suite built on selector names that were never real. `discover` only records what it actually confirmed; anything it couldn't goes in a "Gaps" list rather than getting invented.
 
+### Where your review attention goes
+
+The same evidence that picks selectors also sorts the plan by how much of your attention each case has earned. Once `audit` or `discover` has run, every test case is tiered:
+
+```
+Auto-cleared    every element verified  ·  not P1  ·  read-only     ← read second
+Needs review    anything else                                       ← read first, one at a time
+```
+
+All three conditions have to hold. Any one of them failing flags the case, and they aren't traded off against each other: a guessed selector in a P3 case is still an invented selector, a verified P1 flow still needs someone to confirm it asserts the right thing, and anything that isn't read-only already required your explicit approval before tiering existed.
+
+This changes the reading order, not who approves. You still take one approval action covering the whole plan, and it records both counts and the flagged ids — `reviewed 5 flagged case(s) TC-001, TC-005, TC-010, TC-011, TC-013; accepted 9 auto-cleared` — so accepting the cleared cases is something you did rather than something that happened quietly. Auto-cleared never means approved, and no skill may complete the approval field for you.
+
+Three things keep that from drifting: the flagged ids bind the approval to a specific set rather than a headcount, a `**Triage digest**` over the plan's cases and implementation notes (but not its tier lines) catches content edited after sign-off, and a tier you set by hand is marked `(human override)` and carried through every later recomputation untouched. The rule lives in [`references/review-tiers.md`](references/review-tiers.md).
+
+**What ran actually gets written down.** Tiers tell you where to look before running; this tells you what's actually confirmed after. `execute` writes back into the same plan: after a run, each test case's Acceptance Criteria checkboxes get checked against what actually happened, not what was expected. A plain pass gets a plain `[x]`. A `[KNOWN BUG]` failure — a test that correctly asserts what *should* happen against a defect that doesn't — gets checked too, but annotated (`confirmed FAILING as designed`) so it never reads as a real pass on a skim. A genuine, unmarked failure stays unchecked with a note, since that's neither known-good nor known-bad yet — someone still has to look, and the next `execute` run is what resolves it one way or the other.
+
+This isn't a gate the way `Status` and `Human approval` are — nobody signs off on a checkbox, and you can hand-edit one any time. It closes a loop the pipeline was otherwise missing: a plan looked exactly as unverified after a clean run as it did the day it was written.
+
 **What Verefi puts in your project.** Two places, and that's it:
 
 ```
@@ -333,7 +362,8 @@ verefi/
 │   ├── discovery-template.md          # Enforced discovery.md structure
 │   └── ci-playwright.yml              # Copy-paste GitHub Actions workflow
 ├── references/
-│   └── playwright.instructions.md     # Playwright conventions (v1)
+│   ├── playwright.instructions.md     # Playwright conventions (v1)
+│   └── review-tiers.md                # Risk-tiering rule for test-plan review
 ├── scripts/
 │   ├── create-playwright.sh           # Root-level Playwright setup, safe to re-run
 │   └── install-agent-browser.sh       # agent-browser install, safe to re-run
@@ -365,11 +395,13 @@ Posting results back as a PR comment doesn't exist yet. It needs the coverage sk
 | ✅ Done | `audit` — scans source for selectors and grades testability, no running app needed |
 | ✅ Done | One committed test suite at your repo root, one shared Playwright config |
 | ✅ Done | A copy-paste CI workflow: local run with opt-in, short-lived report upload |
+| ✅ Done | Risk-tiered test-plan approval — auto-clears evidence-verified, non-P1, read-only test cases and streams the rest for review, so review effort scales with risk instead of plan length |
+| 📋 Planned | Persisted intent + declared evidence rules — each test carries why it exists and what a legitimate pass requires, so a generated test stays reviewable long after the plan is gone |
+| 📋 Planned | A coverage skill — checks test cases against acceptance criteria, flags weak assertions, comments on PRs |
+| 📋 Planned | TestClaudeSkill — an automated harness for verifying Claude Code skill changes end to end (headless pipeline runs against a real target, structural-invariant checks, `claude plugin eval`-based quality grading) |
+| 📋 Planned | Discovery-first mode — build test scenarios straight from a live app when you don't have a spec yet |
 | 📋 Planned | Cypress support |
 | 📋 Planned | Karate/API support |
-| 📋 Planned | A coverage skill — checks test cases against acceptance criteria, flags weak assertions, comments on PRs |
-| 📋 Planned | Discovery-first mode — build test scenarios straight from a live app when you don't have a spec yet |
-| 📋 Planned | TestClaudeSkill — an automated harness for verifying Claude Code skill changes end to end (headless pipeline runs against a real target, structural-invariant checks, `claude plugin eval`-based quality grading) |
 
 ---
 
