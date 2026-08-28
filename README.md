@@ -299,7 +299,9 @@ a guess        model inference only         ← last resort, and it's flagged
 
 Running `audit` alone takes seconds and rules out the worst outcome, which is an entire suite built on selector names that were never real. `discover` only records what it actually confirmed; anything it couldn't goes in a "Gaps" list rather than getting invented.
 
-**Where your review attention goes.** The same evidence that picks selectors also sorts the plan by how much of your attention each case has earned. Once `audit` or `discover` has run, every test case is tiered:
+### Where your review attention goes
+
+The same evidence that picks selectors also sorts the plan by how much of your attention each case has earned. Once `audit` or `discover` has run, every test case is tiered:
 
 ```
 Auto-cleared    every element verified  ·  not P1  ·  read-only     ← read second
@@ -312,7 +314,7 @@ This changes the reading order, not who approves. You still take one approval ac
 
 Three things keep that from drifting: the flagged ids bind the approval to a specific set rather than a headcount, a `**Triage digest**` over the plan's cases and implementation notes (but not its tier lines) catches content edited after sign-off, and a tier you set by hand is marked `(human override)` and carried through every later recomputation untouched. The rule lives in [`references/review-tiers.md`](references/review-tiers.md).
 
-**What ran actually gets written down.** `execute` writes back into the same plan: after a run, each test case's Acceptance Criteria checkboxes get checked against what actually happened, not what was expected. A plain pass gets a plain `[x]`. A `[KNOWN BUG]` failure — a test that correctly asserts what *should* happen against a defect that doesn't — gets checked too, but annotated (`confirmed FAILING as designed`) so it never reads as a real pass on a skim. A genuine, unmarked failure stays unchecked with a note, since that's neither known-good nor known-bad yet — someone still has to look, and the next `execute` run is what resolves it one way or the other.
+**What ran actually gets written down.** Tiers tell you where to look before running; this tells you what's actually confirmed after. `execute` writes back into the same plan: after a run, each test case's Acceptance Criteria checkboxes get checked against what actually happened, not what was expected. A plain pass gets a plain `[x]`. A `[KNOWN BUG]` failure — a test that correctly asserts what *should* happen against a defect that doesn't — gets checked too, but annotated (`confirmed FAILING as designed`) so it never reads as a real pass on a skim. A genuine, unmarked failure stays unchecked with a note, since that's neither known-good nor known-bad yet — someone still has to look, and the next `execute` run is what resolves it one way or the other.
 
 This isn't a gate the way `Status` and `Human approval` are — nobody signs off on a checkbox, and you can hand-edit one any time. It closes a loop the pipeline was otherwise missing: a plan looked exactly as unverified after a clean run as it did the day it was written.
 
@@ -394,12 +396,12 @@ Posting results back as a PR comment doesn't exist yet. It needs the coverage sk
 | ✅ Done | One committed test suite at your repo root, one shared Playwright config |
 | ✅ Done | A copy-paste CI workflow: local run with opt-in, short-lived report upload |
 | ✅ Done | Risk-tiered test-plan approval — auto-clears evidence-verified, non-P1, read-only test cases and streams the rest for review, so review effort scales with risk instead of plan length |
+| 📋 Planned | Persisted intent + declared evidence rules — each test carries why it exists and what a legitimate pass requires, so a generated test stays reviewable long after the plan is gone |
+| 📋 Planned | A coverage skill — checks test cases against acceptance criteria, flags weak assertions, comments on PRs |
+| 📋 Planned | TestClaudeSkill — an automated harness for verifying Claude Code skill changes end to end (headless pipeline runs against a real target, structural-invariant checks, `claude plugin eval`-based quality grading) |
+| 📋 Planned | Discovery-first mode — build test scenarios straight from a live app when you don't have a spec yet |
 | 📋 Planned | Cypress support |
 | 📋 Planned | Karate/API support |
-| 📋 Planned | A coverage skill — checks test cases against acceptance criteria, flags weak assertions, comments on PRs |
-| 📋 Planned | Persisted intent + declared evidence rules — each test carries why it exists and what a legitimate pass requires, so a generated test stays reviewable long after the plan is gone |
-| 📋 Planned | Discovery-first mode — build test scenarios straight from a live app when you don't have a spec yet |
-| 📋 Planned | TestClaudeSkill — an automated harness for verifying Claude Code skill changes end to end (headless pipeline runs against a real target, structural-invariant checks, `claude plugin eval`-based quality grading) |
 
 ---
 
