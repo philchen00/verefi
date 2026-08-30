@@ -32,20 +32,20 @@ Versions follow semver: patch (`0.1.1` → `0.1.2`) for fixes and docs, minor
 (`0.1.x` → `0.2.0`) for new skills or backward-compatible behavior changes,
 major for anything that breaks an existing skill's interface.
 
-1. Bump `version` in **both** `.claude-plugin/plugin.json` and the matching
-   entry in `.claude-plugin/marketplace.json` — they must agree; `claude
-   plugin validate --strict` and `claude plugin tag` both enforce this.
-2. Merge that change to `main`.
-3. From `main`, cut the tag:
+Releases are prepared and validated through a private review pipeline before
+anything is tagged or published in this repository. That pipeline runs
+plugin validation, linting, a secrets scan, and the live example test suite
+against every release candidate, then opens a pull request here containing
+only the reviewed, publishable files.
 
-   ```bash
-   claude plugin tag --dry-run .   # preview: confirms both files agree and shows the exact tag
-   claude plugin tag --push .      # creates verefi--v<version> and pushes it to origin
-   ```
-
-`claude plugin tag` refuses to run on a dirty working tree or re-tag an
-existing version by default — use `--force` only if you specifically mean to
-overwrite a tag that was cut in error.
+If your change affects published plugin behavior, bump `version` in **both**
+`.claude-plugin/plugin.json` and the matching entry in
+`.claude-plugin/marketplace.json` as part of your PR — they must agree;
+`claude plugin validate --strict` enforces this. Do not push a
+`verefi--v<version>` tag yourself; tagging and publishing a release is
+reserved for the maintainer, only after the private pipeline has passed.
+This repository's tag-protection rules block `verefi--v*` tag creation by
+anyone other than a repository admin.
 
 ## Reporting problems
 
